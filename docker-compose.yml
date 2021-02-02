@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+  api:
+    image: etc-cache
+    build:
+      context: .
+      target: dev
+    environment:
+      DB_VENDOR: mariadb
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: db
+    env_file:
+    - .env
+    volumes:
+    - ./src:/srv/app/src
+    - ./test:/srv/app/test
+    depends_on:
+    - db
+    #- events
+
+  db:
+    image: mariadb:10.5
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: db
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+
+  #events:
+  #  image: ?
