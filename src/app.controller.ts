@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Ip, Logger } from '@nestjs/common';
 import {
   HealthCheckService,
   HealthCheck,
@@ -9,6 +9,8 @@ import { AppService } from './app.service';
 
 @Controller()
 export class AppController {
+  private readonly logger = new Logger(AppController.name);
+
   constructor(
     private readonly appService: AppService,
     private readonly healthCheckService: HealthCheckService,
@@ -16,7 +18,8 @@ export class AppController {
   ) {}
 
   @Get()
-  root() {
+  root(@Ip() ip = '') {
+    this.logger.debug(`GET "/" requested from "${ip}"`);
     return this.appService.getHello();
   }
 
