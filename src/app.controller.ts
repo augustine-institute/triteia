@@ -20,10 +20,12 @@ import { AppHealthIndicator } from './app.health';
 import { AppService } from './app.service';
 import { Ref, Patch } from './interfaces';
 import {
+  Collection,
+  CollectionInput,
   Document,
+  DocumentInput,
   HistoryResponse,
   ListResponse,
-  DocumentInput,
 } from './schema';
 
 @Controller()
@@ -78,6 +80,11 @@ export class AppController {
     @Query() options?: { deleted?: boolean; at?: string },
   ): Promise<Document> {
     return this.appService.load(ref, options);
+  }
+
+  @Post()
+  async initialize(@Body() data: CollectionInput): Promise<Collection> {
+    return this.appService.initialize(data);
   }
 
   @Post(':collection(?!graphql)')

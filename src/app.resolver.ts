@@ -10,11 +10,13 @@ import {
 import { AppService } from './app.service';
 import { Ref } from './interfaces';
 import {
+  Collection,
+  CollectionInput,
   Document,
   DocumentInput,
-  ListResponse,
-  HistoryResponse,
   Event,
+  HistoryResponse,
+  ListResponse,
 } from './schema';
 
 @Resolver('Document')
@@ -52,6 +54,11 @@ export class AppResolver {
   ): Promise<HistoryResponse> {
     this.logger.debug(`history: ${JSON.stringify({ uri, options })}`);
     return this.appService.loadHistory(this.parseUri(uri), options);
+  }
+
+  @Mutation()
+  async initialize(@Args('input') input: CollectionInput): Promise<Collection> {
+    return this.appService.initialize(input);
   }
 
   @Mutation()

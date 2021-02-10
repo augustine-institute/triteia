@@ -21,6 +21,10 @@ export enum RemoveOp {
     remove = "remove"
 }
 
+export class CollectionInput {
+    id: string;
+}
+
 export class DocumentInput {
     system: string;
     id: string;
@@ -36,6 +40,10 @@ export class DocumentInput {
 
 export class EventInput {
     name?: string;
+}
+
+export class Collection {
+    id: string;
 }
 
 export class Document {
@@ -79,6 +87,8 @@ export class RemoveOperation {
 }
 
 export abstract class IMutation {
+    abstract initialize(input: CollectionInput): Collection | Promise<Collection>;
+
     abstract save(collection: string, input: DocumentInput, merge?: boolean): Document | Promise<Document>;
 
     abstract delete(uri: string, deletedAt?: Date): Document | Promise<Document>;

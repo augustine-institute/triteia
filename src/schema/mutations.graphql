@@ -1,4 +1,9 @@
 type Mutation {
+  "Initialize the db to store documents in a new collection"
+  initialize(
+    input: CollectionInput!
+  ): Collection!
+
   "Saves a new or existing document and compares it to the previous version"
   save(
     collection: String!
@@ -11,6 +16,10 @@ type Mutation {
     uri: String!
     deletedAt: Date
   ): Document!
+}
+
+input CollectionInput {
+  id: String!
 }
 
 input DocumentInput {

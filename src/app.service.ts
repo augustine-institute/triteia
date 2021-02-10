@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Ref } from './interfaces';
 import {
+  Collection,
+  CollectionInput,
   Document,
+  DocumentInput,
   HistoryResponse,
   ListResponse,
-  DocumentInput,
   ValueOp,
 } from './schema';
 
@@ -20,6 +22,11 @@ export class AppService {
   getHello(): string {
     this.logger.debug('getHello()');
     return 'Hello World!';
+  }
+
+  async initialize(collection: CollectionInput): Promise<Collection> {
+    // TODO create partitioned db tables
+    return collection;
   }
 
   async list(
