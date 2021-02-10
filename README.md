@@ -18,6 +18,29 @@ cp .env.default .env
 docker-compose up
 ```
 
+### REST Examples
+
+```bash
+# save a record (file should contain system, id, globalId, name, content)
+curl localhost:3000/users -d @jsonFile
+
+# save a record using just the id and content
+curl localhost:3000/users/somewhere/12345/content -X PUT -d '{"prop":"test"}'
+
+# load a record
+curl localhost:3000/users/somewhere/12345
+
+# load a record's history of changes
+curl localhost:3000/users/somewhere/12345/history
+
+# load records by global id and system name
+curl localhost:3000/users/somewhere?globalId=4ebc7386-f87b-4e9a-8592-f7b40977d119
+
+# list record references in all systems with the same global id
+curl localhost:3000/users?globalId=4ebc7386-f87b-4e9a-8592-f7b40977d119
+```
+
+
 ## Test
 
 ```bash

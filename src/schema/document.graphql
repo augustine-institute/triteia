@@ -1,0 +1,36 @@
+type Document {
+  "A system-wide unique identifier as a REST uri"
+  uri: String!
+
+  "A type of document that may exist in multiple systems (users, orders)"
+  collection: String!
+  "An application or system that a document comes from"
+  system: String!
+  "The system specific unique id"
+  id: String!
+
+  "A global id for the real-world thing that's shared across systems (sku, email, uuid)"
+  globalId: String
+
+  "A human readable name"
+  name: String
+
+  "A queryable date, if any is applicable"
+  date: Date
+
+  "The content of the document"
+  content: JSONObject
+
+  createdAt: Date!
+  updatedAt: Date!
+  deletedAt: Date
+
+  "The most recent event and changes (contains the diff after save)"
+  event: Event
+
+  "The most recent events and changes (limited history)"
+  events: [Event!]
+
+  "Documents in the same collection, but other systems, that share this globalId"
+  related(system: String): [Document!]
+}

@@ -2,32 +2,40 @@ version: '3.9'
 
 services:
   api:
-    image: etc-cache
+    image: triteia-dev
     build:
       context: .
       target: dev
+    ports:
+    - 3000:3000
     environment:
       DB_VENDOR: mariadb
       DB_HOST: db
       DB_PORT: 3306
-      DB_NAME: db
+      DB_NAME: triteia
     env_file:
     - .env
     volumes:
     - ./src:/srv/app/src
     - ./test:/srv/app/test
-    depends_on:
-    - db
+    #depends_on:
+    #- db
     #- events
 
-  db:
-    image: mariadb:10.5
-    environment:
-      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
-      MYSQL_PORT: 3306
-      MYSQL_DATABASE: db
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+  #db:
+  #  image: mariadb:10.5
+  #  command: mysqld --bind-address=0.0.0.0
+  #  environment:
+  #    MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+  #    MYSQL_PORT: 3306
+  #    MYSQL_DATABASE: triteia
+  #    MYSQL_USER: ${DB_USER}
+  #    MYSQL_PASSWORD: ${DB_PASSWORD}
+  #  volumes:
+  #  - db:/var/lib/mysql
 
   #events:
   #  image: ?
+
+#volumes:
+#  db:

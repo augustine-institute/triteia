@@ -1,0 +1,36 @@
+"Tracks the history of a document by recording the changes on each save"
+type Event {
+  "When the event/save occurred"
+  at: Date!
+  "How the record was changed in the form of a JSON Patch"
+  changes: [Change!]!
+  "The name or description of the event, if any"
+  name: String
+}
+
+"A JSON Patch operation"
+union Change = ValueOperation | PathOperation | RemoveOperation
+
+"An add/remove/test operation on a property's value"
+type ValueOperation {
+  op: ValueOp
+  path: String!
+  value: JSON
+}
+
+"A copy/move operation between paths"
+type PathOperation {
+  op: PathOp
+  from: String!
+  path: String!
+}
+
+"A remove operation on a path, which removes a property"
+type RemoveOperation {
+  op: RemoveOp
+  path: String!
+}
+
+enum ValueOp { add, remove, test }
+enum PathOp { move, copy }
+enum RemoveOp { remove }

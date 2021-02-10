@@ -1,0 +1,35 @@
+type Query {
+  "List/search for documents without knowing the system or id"
+  list(
+    collection: String!
+    system: String
+    globalId: String
+    pageToken: Int
+    pageSize: Int
+    deleted: Boolean
+  ): ListResponse!
+
+  "Load a single document using the collection, system, and id"
+  load(
+    uri: String!
+    deleted: Boolean
+    at: Date
+  ): Document!
+
+  "Load the full history of a document using the collection, system, and id"
+  history(
+    uri: String!
+    pageToken: String
+    pageSize: Int
+  ): HistoryResponse!
+}
+
+type ListResponse {
+  documents: [Document!]!
+  nextPageToken: Int
+}
+
+type HistoryResponse {
+  events: [Event!]!
+  nextPageToken: String
+}
