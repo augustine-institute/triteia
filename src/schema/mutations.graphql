@@ -1,0 +1,45 @@
+type Mutation {
+  "Saves a new or existing document and compares it to the previous version"
+  save(
+    collection: String!
+    input: DocumentInput!
+    merge: Boolean
+  ): Document!
+
+  "Sets the deletedAt of a document, which will hide it from future queries"
+  delete(
+    uri: String!
+    deletedAt: Date
+  ): Document!
+}
+
+input DocumentInput {
+  "An application or system that a document comes from"
+  system: String!
+  "The system specific unique id"
+  id: String!
+
+  "A global id for the real-world thing that's shared across systems (sku, email, uuid)"
+  globalId: String
+
+  "A human readable name"
+  name: String
+
+  "A queryable date, if any is applicable"
+  date: Date
+
+  "The content of the document to be cached and compared"
+  content: JSONObject
+
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date
+
+  "Used to name or describe the event for the current changes"
+  event: EventInput
+}
+
+input EventInput {
+  "The nname or description of the event"
+  name: String
+}

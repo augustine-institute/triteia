@@ -21,8 +21,8 @@ docker-compose up
 ### REST Examples
 
 ```bash
-# save a record (file should contain id, globalId, name, content)
-curl localhost:3000/users/somewhere -d @jsonFile
+# save a record (file should contain system, id, globalId, name, content)
+curl localhost:3000/users -d @jsonFile
 
 # save a record using just the id and content
 curl localhost:3000/users/somewhere/12345/content -X PUT -d '{"prop":"test"}'
