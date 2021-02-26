@@ -9,10 +9,11 @@ services:
     ports:
     - 3000:3000
     environment:
-      DB_VENDOR: mariadb
-      DB_HOST: db
-      DB_PORT: 3306
-      DB_NAME: triteia
+      DB_VENDOR: mockdb
+      #DB_VENDOR: mariadb
+      #DB_HOST: db
+      #DB_PORT: 3306
+      #DB_NAME: triteia
     env_file:
     - .env
     volumes:

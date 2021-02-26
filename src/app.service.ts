@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Ref } from './interfaces';
+import {
+  ListOptions,
+  DeleteOptions,
+  LoadOptions,
+  HistoryOptions,
+  Ref,
+} from './interfaces';
 import {
   Collection,
   CollectionInput,
@@ -9,15 +15,14 @@ import {
   ListResponse,
   ValueOp,
 } from './schema';
+import { DatabaseService } from './database/database.service';
 
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
 
-  //constructor(
-  //  private readonly dbService: DbService,
-  //  private readonly diffService: DiffService,
-  //) {}
+  // private readonly diffService: DiffService,
+  constructor(private readonly database: DatabaseService) {}
 
   getHello(): string {
     this.logger.debug('getHello()');
@@ -26,144 +31,103 @@ export class AppService {
 
   async initialize(collection: CollectionInput): Promise<Collection> {
     // TODO create partitioned db tables
-    return collection;
+    return this.database.initialize(collection);
   }
 
   async list(
     collection: string,
     globalId: string,
-    options?: { system?: string; withContent?: boolean; deleted?: boolean },
+    options?: ListOptions,
   ): Promise<ListResponse> {
-    // TODO query for global record basics that have the same global id
-    let documents = [
-      {
-        uri: `/${collection}/mock-system/mock-1234`,
-        collection,
-        globalId,
-        system: 'mock-system',
-        id: 'mock-1234',
-        name: `mock ${collection}`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        ...(options?.withContent && {
-          content: {
-            id: 'mock-1234',
-            name: `mock ${collection}`,
-          },
-        }),
-      },
-    ];
-    if (options?.system) {
-      // TODO this can probably be handled more efficiently by the db
-      documents = documents.filter((doc) => doc.system === options.system);
-    }
-    return { documents };
+    const [documents, nextPageToken] = await this.database.list(
+      collection,
+      globalId,
+      options,
+    );
+    return {
+      documents: documents.map((doc) => this.fromDbDocument(collection, doc)),
+      nextPageToken,
+    };
   }
 
-  async load(
-    { collection, system, id }: Ref,
-    options?: { deleted?: boolean; at?: string },
-  ): Promise<Document> {
-    // TODO load record or throw 404
+  async load(ref: Ref, options?: LoadOptions): Promise<Document> {
+    const document = await this.database.load(ref, options?.deleted);
     // TODO if at, load history; then apply backwards to determine the state at that time
-    return {
-      uri: `/${collection}/${system}/${id}`,
-      collection,
-      system,
-      id,
-      name: `mock ${collection}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      content: { id, name: `mock ${collection}` },
-    };
+    return this.fromDbDocument(ref.collection, document);
   }
 
   async save(
     collection: string,
-    { event, ...document }: DocumentInput,
+    input: DocumentInput,
     options?: { merge?: boolean },
   ): Promise<Document> {
-    // TODO load record or throw 404
-    // TODO calculate diff
-    // TODO save record with diff
+    let changes;
+    try {
+      const { system, id } = input;
+      const ref = { collection, system, id };
+      const document = await this.database.load(ref, true);
+
+      if (options?.merge) {
+        input = { ...document, ...input };
+      }
+
+      // TODO calculate diff
+      changes = [
+        {
+          op: ValueOp.add,
+          path: '/name',
+          value: `mock ${collection}`,
+        },
+      ];
+    } catch (error) {}
+
+    const [document, event] = await this.database.save(input, changes);
+    // TODO fire event
+
     return {
-      collection,
-      ...document,
-      uri: `/${collection}/${document.system}/${document.id}`,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      event: {
-        at: new Date(),
-        name: event?.name,
-        changes: [
-          {
-            op: ValueOp.add,
-            path: '/name',
-            value: `mock ${collection}`,
-          },
-        ],
-      },
+      ...this.fromDbDocument(collection, document),
+      event,
     };
   }
 
   /** Set the deletedAt of a record. */
-  async delete(
-    { collection, system, id }: Ref,
-    options?: { deletedAt?: string | Date },
-  ): Promise<Document> {
-    // TODO set deletedAt on record
-    return {
-      uri: `/${collection}/${system}/${id}`,
-      collection,
-      system,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      content: { id, name: `mock ${collection}` },
-      deletedAt: new Date(),
-    };
+  async delete(ref: Ref, options?: DeleteOptions): Promise<Document> {
+    return this.fromDbDocument(
+      ref.collection,
+      await this.database.delete(ref, options),
+    );
   }
 
   async loadHistory(
-    { collection, system, id }: Ref,
-    options?: { pageSize?: number; pageToken?: string },
+    ref: Ref,
+    options?: HistoryOptions,
   ): Promise<HistoryResponse> {
-    // TODO load history of record
-    return {
-      events: [
-        {
-          at: new Date(),
-          changes: [
-            {
-              op: ValueOp.add,
-              path: '/name',
-              value: `mock ${collection}`,
-            },
-          ],
-        },
-      ],
-    };
+    const [events, nextPageToken] = await this.database.loadHistory(
+      ref,
+      options,
+    );
+    return { events, nextPageToken };
   }
 
   /** List records which share this record's global id. */
-  async listRelated(
-    { collection, system, id }: Ref,
-    options?: { system?: string; withContent?: boolean; deleted?: boolean },
-  ): Promise<ListResponse> {
-    // TODO query for global record basics that have the same global id
+  async listRelated(ref: Ref, options?: ListOptions): Promise<ListResponse> {
+    const { collection } = ref;
+    const [documents, nextPageToken] = await this.database.listRelated(
+      ref,
+      options,
+    );
     return {
-      documents: [
-        {
-          uri: `/${collection}/mock-system/mock-1234`,
-          collection,
-          system: 'mock-system',
-          id: 'mock-1234',
-          globalId: '9697ab7e-94f0-452e-9f0a-8e83165f946c',
-          name: `mock ${collection}`,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
+      documents: documents.map((doc) => this.fromDbDocument(collection, doc)),
+      nextPageToken,
+    };
+  }
+
+  private fromDbDocument(collection: string, document): Document {
+    const { system, id } = document;
+    return {
+      uri: `/${collection}/${system}/${id}`,
+      collection,
+      ...document,
     };
   }
 }

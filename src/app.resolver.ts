@@ -8,7 +8,13 @@ import {
   ResolveField,
 } from '@nestjs/graphql';
 import { AppService } from './app.service';
-import { Ref } from './interfaces';
+import {
+  DeleteOptions,
+  HistoryOptions,
+  ListOptions,
+  LoadOptions,
+  Ref,
+} from './interfaces';
 import {
   Collection,
   CollectionInput,
@@ -84,17 +90,11 @@ export class AppResolver {
   ): Promise<Document[]> {
     this.logger.debug(`related: ${JSON.stringify({ document, system })}`);
     const withContent = true; // TODO base this on selected fields
-    const results = await this.appService.list(
-      document.collection,
-      document.globalId,
-      {
-        system,
-        withContent,
-      },
-    );
-    return results.documents.filter(
-      ({ system, id }) => system !== document.system || id !== document.id,
-    );
+    const results = await this.appService.listRelated(document, {
+      system,
+      withContent,
+    });
+    return results.documents;
   }
 
   @ResolveField()
@@ -119,25 +119,16 @@ export class AppResolver {
   }
 }
 
-interface ListArgs {
+interface ListArgs extends ListOptions {
   collection: string;
-  system: string;
   globalId?: string;
-  pageToken?: number;
-  pageSize?: number;
-  deleted?: boolean;
 }
-interface LoadArgs {
+interface LoadArgs extends LoadOptions {
   uri: string;
-  deleted?: boolean;
-  at?: string;
 }
-interface HistoryArgs {
+interface HistoryArgs extends HistoryOptions {
   uri: string;
-  pageSize?: number;
-  pageToken?: string;
 }
-interface DeleteArgs {
+interface DeleteArgs extends DeleteOptions {
   uri: string;
-  deletedAt?: Date;
 }
