@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AppHealthIndicator } from './app.health';
 import { AppResolver } from './app.resolver';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AppResolver } from './app.resolver';
       debug: true,
       playground: true,
     }),
+    DatabaseModule.register(),
   ],
   controllers: [AppController],
   providers: [AppService, AppHealthIndicator, AppResolver],

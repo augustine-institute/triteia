@@ -18,7 +18,7 @@ import {
 } from '@nestjs/terminus';
 import { AppHealthIndicator } from './app.health';
 import { AppService } from './app.service';
-import { Ref, Patch } from './interfaces';
+import { Ref, HistoryOptions, ListOptions, Patch } from './interfaces';
 import {
   Collection,
   CollectionInput,
@@ -26,6 +26,7 @@ import {
   DocumentInput,
   HistoryResponse,
   ListResponse,
+  Event,
 } from './schema';
 
 @Controller()
@@ -55,26 +56,26 @@ export class AppController {
     ]);
   }
 
-  @Get(':collection(?!graphql)/:system?')
+  @Get('collections/:collection/:system?')
   async list(
     @Param('collection') collection: string,
     @Param('system') system?: string,
     @Query()
-    query?: { globalId?: string; withContent?: boolean; deleted?: boolean },
+    query?: { globalId?: string } & ListOptions,
   ): Promise<ListResponse> {
-    const { globalId, ...options } = query ?? {};
+    const { globalId, withContent, ...options } = query ?? {};
     if (!globalId) {
       // TODO list systems or paginate all records?
       throw new BadRequestException();
     }
     return this.appService.list(collection, globalId, {
       system,
-      withContent: !!system,
+      withContent: withContent ?? !!system,
       ...options,
     });
   }
 
-  @Get(':collection(?!graphql)/:system/:id')
+  @Get('collections/:collection/:system/:id')
   async load(
     @Param() ref: Ref,
     @Query() options?: { deleted?: boolean; at?: string },
@@ -82,12 +83,12 @@ export class AppController {
     return this.appService.load(ref, options);
   }
 
-  @Post()
+  @Post('collections')
   async initialize(@Body() data: CollectionInput): Promise<Collection> {
     return this.appService.initialize(data);
   }
 
-  @Post(':collection(?!graphql)')
+  @Post('collections/:collection')
   async save(
     @Param('collection') collection: string,
     @Body() data: DocumentInput,
@@ -97,7 +98,7 @@ export class AppController {
   }
 
   /** Set the deletedAt of a record. */
-  @Delete(':collection(?!graphql)/:system/:id')
+  @Delete('collections/:collection/:system/:id')
   async delete(
     @Param() ref: Ref,
     @Query() options?: { deletedAt?: string },
@@ -106,7 +107,7 @@ export class AppController {
   }
 
   /** Load just the content of the record instead of including cache metadata. */
-  @Get(':collection(?!graphql)/:system/:id/content')
+  @Get('collections/:collection/:system/:id/content')
   async loadContent(
     @Param() ref: Ref,
     @Query() options?: { deleted?: boolean; at?: string },
@@ -116,7 +117,7 @@ export class AppController {
   }
 
   /** Save using just the record content as the body. */
-  @Put(':collection(?!graphql)/:system/:id/content')
+  @Put('collections/:collection/:system/:id/content')
   async saveContent(
     //@Headers() headers: Record<string, string>, // "field-globalid: sku" or automatic?
     @Param() { collection, system, id }: Ref,
@@ -128,31 +129,33 @@ export class AppController {
     return response.event?.changes ?? [];
   }
 
-  /** Get the history of changes to a record. */
-  @Get(':collection(?!graphql)/:system/:id/history')
-  async loadHistory(@Param() ref: Ref): Promise<HistoryResponse> {
-    return this.appService.loadHistory(ref);
-  }
-
   /** List records which share this record's global id. */
-  @Get(':collection(?!graphql)/:system/:id/related')
+  @Get('collections/:collection/:system/:id/related/:reqSystem?')
   async listRelated(
-    @Param() ref: Ref,
-    @Query() options?: { deleted?: boolean },
-  ): Promise<ListResponse> {
-    return await this.appService.listRelated(ref, options);
-  }
-
-  /** List records which share this record's global id. */
-  @Get(':collection(?!graphql)/:system/:id/related/:reqSystem')
-  async listRelatedInSystem(
     @Param() { reqSystem, ...ref }: Ref & { reqSystem: string },
     @Query() options?: { withContent?: boolean; deleted?: boolean },
-  ): Promise<ListResponse> {
-    const response = await this.appService.listRelated(ref, options);
-    const documents = await Promise.all(
-      response.documents.filter((doc) => doc.system === reqSystem),
-    );
-    return { documents };
+  ): Promise<Document[]> {
+    const response = await this.appService.listRelated(ref, {
+      ...options,
+      ...(reqSystem && { system: reqSystem }),
+      withContent: options?.withContent ?? !!reqSystem,
+    });
+    return response.documents;
+  }
+
+  /** Get the recent history of changes to a record. */
+  @Get('collections/:collection/:system/:id/events')
+  async loadEvents(@Param() ref: Ref): Promise<Event[]> {
+    const { events } = await this.appService.loadHistory(ref);
+    return events;
+  }
+
+  /** Get the full history of changes to a record. */
+  @Get('history/:collection/:system/:id')
+  async loadHistory(
+    @Param() ref: Ref,
+    @Query() options?: HistoryOptions,
+  ): Promise<HistoryResponse> {
+    return await this.appService.loadHistory(ref, options);
   }
 }

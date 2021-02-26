@@ -3,13 +3,14 @@ import { TerminusModule } from '@nestjs/terminus';
 import { AppHealthIndicator } from './app.health';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DatabaseModule } from './database/database.module';
 
 describe('AppController', () => {
   let appController: AppController;
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
-      imports: [TerminusModule],
+      imports: [TerminusModule, DatabaseModule.register('mockdb')],
       controllers: [AppController],
       providers: [AppHealthIndicator, AppService],
     }).compile();
