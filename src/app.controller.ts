@@ -85,6 +85,9 @@ export class AppController {
 
   @Post('collections')
   async initialize(@Body() data: CollectionInput): Promise<Collection> {
+    if (!data?.id) {
+      throw new BadRequestException();
+    }
     return this.appService.initialize(data);
   }
 
@@ -94,7 +97,8 @@ export class AppController {
     @Body() data: DocumentInput,
     @Query() options?: { merge?: boolean },
   ): Promise<Document> {
-    return this.appService.save(collection, data, options);
+    const ref = { collection, system: data.system, id: data.id };
+    return this.appService.save(ref, data, options);
   }
 
   /** Set the deletedAt of a record. */
@@ -120,12 +124,12 @@ export class AppController {
   @Put('collections/:collection/:system/:id/content')
   async saveContent(
     //@Headers() headers: Record<string, string>, // "field-globalid: sku" or automatic?
-    @Param() { collection, system, id }: Ref,
+    @Param() ref: Ref,
     @Body() content: Record<string, unknown>,
     @Query() options?: { merge?: boolean },
   ): Promise<Patch> {
-    const document = { system, id, content };
-    const response = await this.appService.save(collection, document, options);
+    const document = { system: ref.system, id: ref.id, content };
+    const response = await this.appService.save(ref, document, options);
     return response.event?.changes ?? [];
   }
 

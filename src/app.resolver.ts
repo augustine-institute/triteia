@@ -74,7 +74,8 @@ export class AppResolver {
     @Args('merge') merge?: boolean,
   ): Promise<Document> {
     this.logger.debug(`save: ${JSON.stringify({ collection, input, merge })}`);
-    return this.appService.save(collection, input, { merge });
+    const ref = { collection, system: input.system, id: input.id };
+    return this.appService.save(ref, input, { merge });
   }
 
   @Mutation()

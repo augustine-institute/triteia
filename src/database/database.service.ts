@@ -1,42 +1,77 @@
 import { Injectable } from '@nestjs/common';
 import { Ref, ListOptions, DeleteOptions, HistoryOptions } from '../interfaces';
-import {
-  Collection,
-  CollectionInput,
-  ListResponse,
-  Document,
-  DocumentInput,
-  Change,
-  Event,
-} from '../schema';
-import { DbDocument, DbEvent } from './interfaces';
+import { Collection, CollectionInput, DocumentInput, Change } from '../schema';
+import { DbConnection, DbDocument, DbEvent } from './interfaces';
 
 @Injectable()
-export abstract class DatabaseService {
-  abstract initialize(collection: CollectionInput): Promise<Collection>;
+export abstract class DatabaseService implements DbConnection {
+  abstract withTransaction<T>(
+    duringTransaction: (conn: DbConnection) => Promise<T>,
+  ): Promise<T>;
 
-  abstract list(
+  async initialize(input: CollectionInput): Promise<Collection> {
+    return this.withTransaction((conn) => {
+      return conn.initialize(input);
+    });
+  }
+
+  async list(
     collection: string,
     globalId: string,
     options?: ListOptions,
-  ): Promise<[DbDocument[], number?]>;
+  ): Promise<[DbDocument[], number?]> {
+    return this.withTransaction((conn) => {
+      return conn.list(collection, globalId, options);
+    });
+  }
 
-  abstract load(ref: Ref, deleted?: boolean): Promise<DbDocument>;
+  async load(ref: Ref, deleted?: boolean): Promise<DbDocument> {
+    return this.withTransaction((conn) => {
+      return conn.load(ref, deleted);
+    });
+  }
 
-  abstract loadHistory(
+  async loadHistory(
     ref: Ref,
     options?: HistoryOptions,
-  ): Promise<[DbEvent[], string?]>;
+  ): Promise<[DbEvent[], string?]> {
+    return this.withTransaction((conn) => {
+      return conn.loadHistory(ref, options);
+    });
+  }
 
-  abstract listRelated(
+  async listRelated(
     ref: Ref,
     options?: ListOptions,
-  ): Promise<[DbDocument[], number?]>;
+  ): Promise<[DbDocument[], number?]> {
+    return this.withTransaction((conn) => {
+      return conn.listRelated(ref, options);
+    });
+  }
 
-  abstract save(
+  async create(
+    collection: string,
     document: DocumentInput,
     changes: Change[],
-  ): Promise<[DbDocument, DbEvent]>;
+  ): Promise<[DbDocument, DbEvent]> {
+    return this.withTransaction((conn) => {
+      return conn.create(collection, document, changes);
+    });
+  }
 
-  abstract delete(ref: Ref, options?: DeleteOptions): Promise<DbDocument>;
+  async update(
+    ref: Ref,
+    document: DocumentInput,
+    changes: Change[],
+  ): Promise<[DbDocument, DbEvent]> {
+    return this.withTransaction((conn) => {
+      return conn.update(ref, document, changes);
+    });
+  }
+
+  async delete(ref: Ref, options?: DeleteOptions): Promise<DbDocument> {
+    return this.withTransaction((conn) => {
+      return conn.delete(ref, options);
+    });
+  }
 }

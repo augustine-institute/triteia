@@ -21,11 +21,14 @@ docker-compose up
 ### REST Examples
 
 ```bash
+# initialize a collection of users
+curl localhost:3000/collections -H 'Content-type: application/json' -d '{"id":"users"}'
+
 # save a record (file should contain system, id, globalId, name, content)
-curl localhost:3000/collections/users -d @jsonFile
+curl localhost:3000/collections/users -H 'Content-type: application/json' -d @jsonFile
 
 # save a record using just the id and content
-curl localhost:3000/collections/users/somewhere/12345/content -X PUT -d '{"prop":"test"}'
+curl localhost:3000/collections/users/somewhere/12345/content -H 'Content-type: application/json' -X PUT -d '{"prop":"test"}'
 
 # load a record
 curl localhost:3000/collections/users/somewhere/12345

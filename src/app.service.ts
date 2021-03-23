@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   ListOptions,
   DeleteOptions,
@@ -9,6 +9,7 @@ import {
 import {
   Collection,
   CollectionInput,
+  Change,
   Document,
   DocumentInput,
   HistoryResponse,
@@ -16,6 +17,7 @@ import {
   ValueOp,
 } from './schema';
 import { DatabaseService } from './database/database.service';
+import { DbDocument } from './database/interfaces';
 
 @Injectable()
 export class AppService {
@@ -30,7 +32,6 @@ export class AppService {
   }
 
   async initialize(collection: CollectionInput): Promise<Collection> {
-    // TODO create partitioned db tables
     return this.database.initialize(collection);
   }
 
@@ -57,45 +58,61 @@ export class AppService {
   }
 
   async save(
-    collection: string,
+    ref: Ref,
     input: DocumentInput,
     options?: { merge?: boolean },
   ): Promise<Document> {
-    let changes;
-    try {
-      const { system, id } = input;
-      const ref = { collection, system, id };
-      const document = await this.database.load(ref, true);
+    const [document, event] = await this.database.withTransaction(
+      async (conn) => {
+        let existing: DbDocument | null;
+        try {
+          existing = await conn.load(ref, true);
+          this.checkDates(existing, input);
 
-      if (options?.merge) {
-        input = { ...document, ...input };
-      }
+          if (options?.merge) {
+            input = { ...existing, ...input };
+          }
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            existing = null;
+          } else {
+            throw error;
+          }
+        }
 
-      // TODO calculate diff
-      changes = [
-        {
-          op: ValueOp.add,
-          path: '/name',
-          value: `mock ${collection}`,
-        },
-      ];
-    } catch (error) {}
+        // TODO calculate diff
+        const changes: Change[] = [
+          {
+            op: ValueOp.add,
+            path: '/name',
+            value: `mock ${ref.collection}`,
+          },
+        ];
 
-    const [document, event] = await this.database.save(input, changes);
+        if (existing) {
+          return await conn.update(ref, input, changes);
+        } else {
+          return await conn.create(ref.collection, input, changes);
+        }
+      },
+    );
+
     // TODO fire event
 
     return {
-      ...this.fromDbDocument(collection, document),
+      ...this.fromDbDocument(ref.collection, document),
       event,
     };
   }
 
   /** Set the deletedAt of a record. */
   async delete(ref: Ref, options?: DeleteOptions): Promise<Document> {
-    return this.fromDbDocument(
+    const document = await this.fromDbDocument(
       ref.collection,
       await this.database.delete(ref, options),
     );
+    // TODO fire event
+    return document;
   }
 
   async loadHistory(
@@ -129,5 +146,18 @@ export class AppService {
       collection,
       ...document,
     };
+  }
+
+  private checkDates(existing: DbDocument, input: DocumentInput) {
+    if (input.createdAt) {
+      throw new BadRequestException(
+        'Cannot change createdAt on an existing record',
+      );
+    }
+    if (input.updatedAt && new Date(input.updatedAt) <= existing.updatedAt) {
+      throw new BadRequestException(
+        `Document was already updated at ${existing.updatedAt.toISOString()}`,
+      );
+    }
   }
 }
