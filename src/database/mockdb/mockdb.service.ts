@@ -6,13 +6,13 @@ import {
   HistoryOptions,
 } from '../../interfaces';
 import {
+  Change,
+  ChangeOp,
   Collection,
   CollectionInput,
   DocumentInput,
-  Change,
-  ValueOp,
 } from '../../schema';
-import { DbDocument, DbEvent } from '../interfaces';
+import { DbConnection, DbDocument, DbEvent } from '../interfaces';
 import { DatabaseService } from '../database.service';
 
 @Injectable()
@@ -64,11 +64,11 @@ export class MockdbService extends DatabaseService {
     ref: Ref,
     options?: HistoryOptions,
   ): Promise<[DbEvent[], string?]> {
-    const event = {
+    const event: DbEvent = {
       at: new Date(),
       changes: [
         {
-          op: ValueOp.add,
+          op: ChangeOp.add,
           path: '/name',
           value: `mock ${ref.collection}`,
         },
@@ -96,7 +96,8 @@ export class MockdbService extends DatabaseService {
     return [[document], 2];
   }
 
-  async save(
+  async create(
+    collection: string,
     document: DocumentInput,
     changes: Change[],
   ): Promise<[DbDocument, DbEvent]> {
@@ -114,6 +115,14 @@ export class MockdbService extends DatabaseService {
     ];
   }
 
+  async update(
+    ref: Ref,
+    document: DocumentInput,
+    changes: Change[],
+  ): Promise<[DbDocument, DbEvent]> {
+    return this.create(ref.collection, document, changes);
+  }
+
   async delete(
     { collection, system, id }: Ref,
     options?: DeleteOptions,
@@ -126,5 +135,11 @@ export class MockdbService extends DatabaseService {
       content: { id, name: `mock ${collection}` },
       deletedAt: options?.deletedAt ? new Date(options?.deletedAt) : new Date(),
     };
+  }
+
+  async withTransaction<T>(
+    duringTransaction: (conn: DbConnection) => Promise<T>,
+  ): Promise<T> {
+    return await duringTransaction(this);
   }
 }

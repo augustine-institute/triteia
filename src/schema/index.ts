@@ -6,18 +6,12 @@
 
 /* tslint:disable */
 /* eslint-disable */
-export enum ValueOp {
+export enum ChangeOp {
     add = "add",
-    remove = "remove",
-    test = "test"
-}
-
-export enum PathOp {
+    replace = "replace",
+    test = "test",
     move = "move",
-    copy = "copy"
-}
-
-export enum RemoveOp {
+    copy = "copy",
     remove = "remove"
 }
 
@@ -69,21 +63,11 @@ export class Event {
     name?: string;
 }
 
-export class ValueOperation {
-    op?: ValueOp;
+export class Change {
+    op: ChangeOp;
+    from?: string;
     path: string;
     value?: JSON;
-}
-
-export class PathOperation {
-    op?: PathOp;
-    from: string;
-    path: string;
-}
-
-export class RemoveOperation {
-    op?: RemoveOp;
-    path: string;
 }
 
 export abstract class IMutation {
@@ -114,4 +98,3 @@ export class HistoryResponse {
 
 export type JSON = any;
 export type JSONObject = any;
-export type Change = ValueOperation | PathOperation | RemoveOperation;
