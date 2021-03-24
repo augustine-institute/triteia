@@ -18,7 +18,7 @@ import {
 } from '@nestjs/terminus';
 import { AppHealthIndicator } from './app.health';
 import { AppService } from './app.service';
-import { Ref, HistoryOptions, ListOptions, Patch } from './interfaces';
+import { Ref, JsonPatch, HistoryOptions, ListOptions } from './interfaces';
 import {
   Collection,
   CollectionInput,
@@ -127,7 +127,7 @@ export class AppController {
     @Param() ref: Ref,
     @Body() content: Record<string, unknown>,
     @Query() options?: { merge?: boolean },
-  ): Promise<Patch> {
+  ): Promise<JsonPatch> {
     const document = { system: ref.system, id: ref.id, content };
     const response = await this.appService.save(ref, document, options);
     return response.event?.changes ?? [];

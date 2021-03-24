@@ -7,10 +7,10 @@ import {
   HistoryOptions,
 } from '../../interfaces';
 import {
+  Change,
   Collection,
   CollectionInput,
   DocumentInput,
-  Change,
 } from '../../schema';
 import { DbConnection, DbDocument, DbEvent } from '../interfaces';
 

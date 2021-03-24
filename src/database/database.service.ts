@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Ref, ListOptions, DeleteOptions, HistoryOptions } from '../interfaces';
-import { Collection, CollectionInput, DocumentInput, Change } from '../schema';
+import { Change, Collection, CollectionInput, DocumentInput } from '../schema';
 import { DbConnection, DbDocument, DbEvent } from './interfaces';
 
 @Injectable()

@@ -9,28 +9,11 @@ type Event {
 }
 
 "A JSON Patch operation"
-union Change = ValueOperation | PathOperation | RemoveOperation
-
-"An add/remove/test operation on a property's value"
-type ValueOperation {
-  op: ValueOp
+type Change {
+  op: ChangeOp!
+  from: String
   path: String!
   value: JSON
 }
 
-"A copy/move operation between paths"
-type PathOperation {
-  op: PathOp
-  from: String!
-  path: String!
-}
-
-"A remove operation on a path, which removes a property"
-type RemoveOperation {
-  op: RemoveOp
-  path: String!
-}
-
-enum ValueOp { add, remove, test }
-enum PathOp { move, copy }
-enum RemoveOp { remove }
+enum ChangeOp { add, replace, test, move, copy, remove }

@@ -1,3 +1,6 @@
 import { Event } from '../../schema';
+import { JsonPatch } from '../../interfaces';
 
-export type DbEvent = Event;
+export interface DbEvent extends Event {
+  changes: JsonPatch;
+}

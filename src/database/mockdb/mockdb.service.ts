@@ -6,11 +6,11 @@ import {
   HistoryOptions,
 } from '../../interfaces';
 import {
+  Change,
+  ChangeOp,
   Collection,
   CollectionInput,
   DocumentInput,
-  Change,
-  ValueOp,
 } from '../../schema';
 import { DbConnection, DbDocument, DbEvent } from '../interfaces';
 import { DatabaseService } from '../database.service';
@@ -64,11 +64,11 @@ export class MockdbService extends DatabaseService {
     ref: Ref,
     options?: HistoryOptions,
   ): Promise<[DbEvent[], string?]> {
-    const event = {
+    const event: DbEvent = {
       at: new Date(),
       changes: [
         {
-          op: ValueOp.add,
+          op: ChangeOp.add,
           path: '/name',
           value: `mock ${ref.collection}`,
         },

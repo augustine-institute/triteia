@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   ListOptions,
   DeleteOptions,
@@ -7,14 +12,14 @@ import {
   Ref,
 } from './interfaces';
 import {
+  Change,
+  ChangeOp,
   Collection,
   CollectionInput,
-  Change,
   Document,
   DocumentInput,
   HistoryResponse,
   ListResponse,
-  ValueOp,
 } from './schema';
 import { DatabaseService } from './database/database.service';
 import { DbDocument } from './database/interfaces';
@@ -83,7 +88,7 @@ export class AppService {
         // TODO calculate diff
         const changes: Change[] = [
           {
-            op: ValueOp.add,
+            op: ChangeOp.add,
             path: '/name',
             value: `mock ${ref.collection}`,
           },
