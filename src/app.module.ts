@@ -14,10 +14,12 @@ import { DatabaseModule } from './database/database.module';
     TerminusModule,
     GraphQLModule.forRoot({
       typePaths: ['./**/*.graphql'],
-      definitions: {
-        path: join(process.cwd(), 'src/schema/index.ts'),
-        outputAs: 'class',
-      },
+      ...(process.env.NODE_ENV === 'development' && {
+        definitions: {
+          path: join(process.cwd(), 'src/schema/index.ts'),
+          outputAs: 'class',
+        },
+      }),
       resolvers: {
         JSON: GraphQLJSON,
         JSONObject: GraphQLJSONObject,
