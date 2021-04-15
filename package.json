@@ -1,10 +1,11 @@
 {
   "name": "triteia",
-  "version": "0.0.1",
-  "description": "",
-  "author": "",
-  "private": true,
-  "license": "UNLICENSED",
+  "version": "1.0.0-alpha",
+  "description": "A caching tool designed to assist with integrations and automation pipelines.",
+  "homepage": "https://github.com/augustine-institute/triteia#readme",
+  "repository": "github:augustine-institute/triteia",
+  "license": "MIT",
+  "author": "Ken Michalak",
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
