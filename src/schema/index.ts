@@ -83,7 +83,7 @@ export abstract class IQuery {
 
     abstract load(uri: string, deleted?: boolean, at?: Date): Document | Promise<Document>;
 
-    abstract history(uri: string, pageToken?: string, pageSize?: number): HistoryResponse | Promise<HistoryResponse>;
+    abstract history(uri: string, pageToken?: string, pageSize?: number, asc?: boolean): HistoryResponse | Promise<HistoryResponse>;
 }
 
 export class ListResponse {

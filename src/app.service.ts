@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import * as jsonpatch from 'fast-json-patch';
 import {
   ListOptions,
   DeleteOptions,
@@ -13,9 +14,9 @@ import {
 } from './interfaces';
 import {
   Change,
-  ChangeOp,
   Collection,
   CollectionInput,
+  Event,
   Document,
   DocumentInput,
   HistoryResponse,
@@ -24,11 +25,12 @@ import {
 import { DatabaseService } from './database/database.service';
 import { DbDocument } from './database/interfaces';
 
+type AnyRecord = Record<string | number | symbol, unknown>;
+
 @Injectable()
 export class AppService {
   private readonly logger = new Logger(AppService.name);
 
-  // private readonly diffService: DiffService,
   constructor(private readonly database: DatabaseService) {}
 
   getHello(): string {
@@ -58,7 +60,10 @@ export class AppService {
 
   async load(ref: Ref, options?: LoadOptions): Promise<Document> {
     const document = await this.database.load(ref, options?.deleted);
-    // TODO if at, load history; then apply backwards to determine the state at that time
+    if (options?.at) {
+      // note: this does not get metadata at that time (id, globalId, etc)
+      document.content = await this.loadContentAt(ref, options.at);
+    }
     return this.fromDbDocument(ref.collection, document);
   }
 
@@ -85,14 +90,11 @@ export class AppService {
           }
         }
 
-        // TODO calculate diff
-        const changes: Change[] = [
-          {
-            op: ChangeOp.add,
-            path: '/name',
-            value: `mock ${ref.collection}`,
-          },
-        ];
+        const changes = jsonpatch.compare(
+          existing?.content || {},
+          input.content || {},
+          true,
+        ) as Change[];
 
         if (existing) {
           return await conn.update(ref, input, changes);
@@ -164,5 +166,25 @@ export class AppService {
         `Document was already updated at ${existing.updatedAt.toISOString()}`,
       );
     }
+  }
+
+  /** Load history; then apply in order to determine the state at that time. */
+  private async loadContentAt(ref: Ref, at: string): Promise<AnyRecord> {
+    const content: AnyRecord = {};
+    let events: Event[] | undefined;
+    let nextPageToken: string | undefined;
+    while (events === undefined || nextPageToken) {
+      [events, nextPageToken] = await this.database.loadHistory(ref, {
+        pageToken: nextPageToken,
+        asc: true,
+      });
+      for (const event of events) {
+        if (event.at.toISOString() > at) {
+          return content;
+        }
+        jsonpatch.applyPatch(content, event.changes as jsonpatch.Operation[]);
+      }
+    }
+    return content;
   }
 }

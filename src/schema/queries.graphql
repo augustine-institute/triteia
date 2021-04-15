@@ -21,6 +21,7 @@ type Query {
     uri: String!
     pageToken: String
     pageSize: Int
+    asc: Boolean
   ): HistoryResponse!
 }
 
