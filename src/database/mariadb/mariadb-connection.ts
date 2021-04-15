@@ -90,7 +90,7 @@ export class MariadbConnection implements DbConnection {
     const pageSize = Number(options?.pageSize || 100);
 
     if (options?.pageToken) {
-      conditions.push('at < ?');
+      conditions.push(options?.asc ? 'at > ?' : 'at < ?');
       params.push(options.pageToken);
     }
 
@@ -98,7 +98,7 @@ export class MariadbConnection implements DbConnection {
       `SELECT *
        FROM ${this.conn.escapeId(`${collection}Events`)}
        WHERE ${conditions.join(' AND ')}
-       ORDER BY at DESC
+       ORDER BY at ${options?.asc ? 'ASC' : 'DESC'}
        LIMIT ${pageSize}`,
       params,
     );

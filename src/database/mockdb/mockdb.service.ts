@@ -74,7 +74,7 @@ export class MockdbService extends DatabaseService {
         },
       ],
     };
-    return [[event], '2021-02-25T00:00:00Z'];
+    return [[event], undefined];
   }
 
   async listRelated(
