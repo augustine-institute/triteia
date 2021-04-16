@@ -27,7 +27,7 @@ FROM node:14-alpine
 
 RUN mkdir -p /srv/app
 WORKDIR /srv/app
-USER node
+USER 1000
 EXPOSE 3000
 
 ENV NODE_ENV=production
