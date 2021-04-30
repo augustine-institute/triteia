@@ -34,17 +34,11 @@ export interface DbConnection {
     options?: ListOptions,
   ): Promise<[DbDocument[], number?]>;
 
-  create(
-    collection: string,
-    document: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]>;
+  create(collection: string, document: DocumentInput): Promise<DbDocument>;
 
-  update(
-    ref: Ref,
-    document: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]>;
+  update(ref: Ref, document: DocumentInput): Promise<DbDocument>;
+
+  createEvent(ref: Ref, event: DbEvent): Promise<DbEvent>;
 
   delete(ref: Ref, options?: DeleteOptions): Promise<DbDocument>;
 }

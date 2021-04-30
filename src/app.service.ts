@@ -17,13 +17,14 @@ import {
   Collection,
   CollectionInput,
   Event,
+  EventInput,
   Document,
   DocumentInput,
   HistoryResponse,
   ListResponse,
 } from './schema';
 import { DatabaseService } from './database/database.service';
-import { DbDocument } from './database/interfaces';
+import { DbDocument, DbEvent } from './database/interfaces';
 
 type AnyRecord = Record<string | number | symbol, unknown>;
 
@@ -72,6 +73,8 @@ export class AppService {
     input: DocumentInput,
     options?: { merge?: boolean },
   ): Promise<Document> {
+    let hasEvent = false;
+
     const [document, event] = await this.database.withTransaction(
       async (conn) => {
         let existing: DbDocument | null;
@@ -79,8 +82,11 @@ export class AppService {
           existing = await conn.load(ref, true);
           this.checkDates(existing, input);
 
-          if (options?.merge) {
-            input = { ...existing, ...input };
+          if (options?.merge && input.content) {
+            input.content = {
+              ...existing.content,
+              ...input.content,
+            };
           }
         } catch (error) {
           if (error instanceof NotFoundException) {
@@ -90,21 +96,24 @@ export class AppService {
           }
         }
 
-        const changes = jsonpatch.compare(
-          existing?.content || {},
-          input.content || {},
-          true,
-        ) as Change[];
+        const document = existing
+          ? await conn.update(ref, input)
+          : await conn.create(ref.collection, input);
 
-        if (existing) {
-          return await conn.update(ref, input, changes);
-        } else {
-          return await conn.create(ref.collection, input, changes);
+        // calculate diff and save the event if something happened
+        let event = this.generateEvent(existing, document, input.event);
+        if (event.changes.length || event.name) {
+          event = await conn.createEvent(ref, event);
+          hasEvent = true;
         }
+
+        return [document, event];
       },
     );
 
-    // TODO fire event
+    if (hasEvent) {
+      // TODO fire event
+    }
 
     return {
       ...this.fromDbDocument(ref.collection, document),
@@ -186,5 +195,24 @@ export class AppService {
       }
     }
     return content;
+  }
+
+  /** Compare two documents and generate an event object. */
+  private generateEvent(
+    before: DbDocument | null,
+    after: DbDocument,
+    input?: EventInput,
+  ): DbEvent {
+    const changes = jsonpatch.compare(
+      before?.content || {},
+      after.content || {},
+      true,
+    );
+
+    return {
+      name: input?.name,
+      at: after.updatedAt,
+      changes: changes as Change[],
+    };
   }
 }

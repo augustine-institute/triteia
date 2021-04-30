@@ -99,28 +99,20 @@ export class MockdbService extends DatabaseService {
   async create(
     collection: string,
     document: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]> {
-    return [
-      {
-        ...document,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        at: new Date(),
-        name: document.event?.name,
-        changes,
-      },
-    ];
+  ): Promise<DbDocument> {
+    return {
+      ...document,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
   }
 
-  async update(
-    ref: Ref,
-    document: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]> {
-    return this.create(ref.collection, document, changes);
+  async update(ref: Ref, document: DocumentInput): Promise<DbDocument> {
+    return {
+      ...document,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
   }
 
   async delete(
@@ -135,6 +127,10 @@ export class MockdbService extends DatabaseService {
       content: { id, name: `mock ${collection}` },
       deletedAt: options?.deletedAt ? new Date(options?.deletedAt) : new Date(),
     };
+  }
+
+  async createEvent(ref: Ref, event: DbEvent): Promise<DbEvent> {
+    return event;
   }
 
   async withTransaction<T>(
