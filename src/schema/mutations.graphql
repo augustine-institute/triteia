@@ -49,6 +49,6 @@ input DocumentInput {
 }
 
 input EventInput {
-  "The nname or description of the event"
+  "The name or description of the event"
   name: String
 }

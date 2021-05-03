@@ -140,46 +140,28 @@ export class MariadbConnection implements DbConnection {
     ];
   }
 
-  async create(
-    collection: string,
-    input: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]> {
+  async create(collection: string, input: DocumentInput): Promise<DbDocument> {
     const { system, id } = input;
     const ref = { collection, system, id };
     const data = this.cleanDocumentInput(input);
 
-    return await Promise.all([
-      this.doInsert(collection, data).then(() => this.load(ref, true)),
-      this.insertEvent(ref, changes, input)
-        .then(() => this.loadHistory(ref, { pageSize: 1 }))
-        .then((results) => results?.[0]?.[0]),
-    ]);
+    await this.doInsert(collection, data);
+    return this.load(ref, true);
   }
 
-  async update(
-    ref: Ref,
-    input: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]> {
+  async update(ref: Ref, input: DocumentInput): Promise<DbDocument> {
     const { collection, system, id } = ref;
     const data = this.cleanDocumentInput(input);
     const columns = Object.keys(data).map((k) => this.conn.escapeId(k));
 
-    const doUpdate = this.conn.query(
+    await this.conn.query(
       `UPDATE ${this.conn.escapeId(collection)}
        SET ${columns.map((c) => `${c} = ?`).join(', ')}
        WHERE system = ? AND id = ?
        LIMIT 1`,
       [...Object.values(data), system, id],
     );
-    const results = await Promise.all([
-      doUpdate.then(() => this.load(ref, true)),
-      this.insertEvent(ref, changes, input)
-        .then(() => this.loadHistory(ref, { pageSize: 1 }))
-        .then((results) => results?.[0]?.[0]),
-    ]);
-    return results;
+    return this.load(ref, true);
   }
 
   async delete(ref: Ref, options?: DeleteOptions): Promise<DbDocument> {
@@ -219,20 +201,19 @@ export class MariadbConnection implements DbConnection {
     return data;
   }
 
-  protected async insertEvent(
-    { collection, system, id }: Ref,
-    changes: Change[],
-    input?: DocumentInput,
-  ) {
-    const data = { system, id, changes: JSON.stringify(changes) };
-    if (input?.event?.name) {
-      data['name'] = input.event.name;
-    }
-    if (input?.updatedAt) {
-      data['at'] = this.formatDatetime(input.updatedAt);
-    }
+  async createEvent(ref: Ref, event: DbEvent): Promise<DbEvent> {
+    const { collection, system, id } = ref;
+    const data = {
+      system,
+      id,
+      changes: JSON.stringify(event.changes),
+      at: this.formatDatetime(event.at),
+      ...(event.name && { name: event.name }),
+    };
 
-    return this.doInsert(`${collection}Events`, data);
+    await this.doInsert(`${collection}Events`, data);
+    const history = await this.loadHistory(ref, { pageSize: 1 });
+    return history?.[0]?.[0];
   }
 
   protected formatDatetime(date: string | Date) {

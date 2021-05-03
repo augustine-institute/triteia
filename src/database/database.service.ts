@@ -52,20 +52,21 @@ export abstract class DatabaseService implements DbConnection {
   async create(
     collection: string,
     document: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]> {
+  ): Promise<DbDocument> {
     return this.withTransaction((conn) => {
-      return conn.create(collection, document, changes);
+      return conn.create(collection, document);
     });
   }
 
-  async update(
-    ref: Ref,
-    document: DocumentInput,
-    changes: Change[],
-  ): Promise<[DbDocument, DbEvent]> {
+  async update(ref: Ref, document: DocumentInput): Promise<DbDocument> {
     return this.withTransaction((conn) => {
-      return conn.update(ref, document, changes);
+      return conn.update(ref, document);
+    });
+  }
+
+  async createEvent(ref: Ref, event: DbEvent): Promise<DbEvent> {
+    return this.withTransaction((conn) => {
+      return conn.createEvent(ref, event);
     });
   }
 
