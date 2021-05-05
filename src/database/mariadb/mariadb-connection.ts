@@ -246,6 +246,7 @@ export class MariadbConnection implements DbConnection {
 
   protected async createEventTable(id: string) {
     const table = `${id}Events`;
+    const constraint = `${id}_fkSystemId`;
     await this.conn.query(
       `CREATE TABLE IF NOT EXISTS ${this.conn.escapeId(table)} (
          system VARCHAR(255) NOT NULL,
@@ -254,7 +255,7 @@ export class MariadbConnection implements DbConnection {
          name VARCHAR(255),
          changes JSON,
          PRIMARY KEY (system, id, at),
-         CONSTRAINT fkSystemId FOREIGN KEY (system, id)
+         CONSTRAINT ${this.conn.escapeId(constraint)} FOREIGN KEY (system, id)
          REFERENCES ${this.conn.escapeId(id)} (system, id)
          ON DELETE CASCADE ON UPDATE CASCADE
        )
