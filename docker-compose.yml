@@ -13,6 +13,7 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DB_NAME: triteia
+      AMQP_HOST: rabbit
     env_file:
     - .env
     volumes:
@@ -20,7 +21,7 @@ services:
     - ./test:/srv/app/test
     depends_on:
     - db
-    #- events
+    - rabbit
 
   db:
     image: mariadb:10.5
@@ -34,8 +35,13 @@ services:
     volumes:
     - db:/var/lib/mysql
 
-  #events:
-  #  image: ?
+  rabbit:
+    image: rabbitmq:3-management
+    hostname: rabbit
+    ports:
+    - 15672:15672
+    volumes:
+    - ./.rabbitmq_plugins:/etc/rabbitmq/enabled_plugins
 
 volumes:
   db:

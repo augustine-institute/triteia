@@ -3,6 +3,7 @@ Dockerfile
 .dockerignore
 .env*
 .git*
+.rabbitmq_plugins
 tf
 
 # compiled output
