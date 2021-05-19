@@ -13,10 +13,21 @@ resource "kubernetes_role" "main" {
   rule {
     api_groups = [""]
     resources  = ["secrets"]
-    resource_names = [
-      var.db_secret_name,
-    ]
+    resource_names = concat(
+      [var.db_secret_name],
+      var.rabbitmq_name != "" ? ["${var.rabbitmq_name}-default-user"] : [],
+      var.secrets,
+    )
     verbs = ["get", "list", "watch"]
+  }
+  dynamic "rule" {
+    for_each = var.config_maps == [] ? [] : [true]
+    content {
+      api_groups     = [""]
+      resources      = ["config_map"]
+      resource_names = var.config_maps
+      verbs          = ["get", "list", "watch"]
+    }
   }
 }
 

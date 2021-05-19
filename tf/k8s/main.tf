@@ -48,6 +48,51 @@ resource "kubernetes_deployment" "main" {
             }
           }
 
+          # rabbitmq with rabbitmq_amqp1_0
+          dynamic "env" {
+            for_each = var.rabbitmq_name != "" ? {
+              AMQP_HOST          = var.rabbitmq_name
+              AMQP_PORT          = "5672"
+              AMQP_TARGET_PREFIX = "/topic/${var.name}."
+            } : {}
+            content {
+              name  = env.key
+              value = env.value
+            }
+          }
+          dynamic "env" {
+            for_each = var.rabbitmq_name != "" ? {
+              AMQP_USERNAME = "username"
+              AMQP_PASSWORD = "password"
+            } : {}
+            content {
+              name = env.key
+              value_from {
+                secret_key_ref {
+                  name = "${var.rabbitmq_name}-default-user"
+                  key  = env.key
+                }
+              }
+            }
+          }
+
+          dynamic "env_from" {
+            for_each = var.config_maps
+            content {
+              config_map_ref {
+                name = env_from.value
+              }
+            }
+          }
+          dynamic "env_from" {
+            for_each = var.secrets
+            content {
+              secret_ref {
+                name = env_from.value
+              }
+            }
+          }
+
           liveness_probe {
             http_get {
               port = 3000

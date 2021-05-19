@@ -42,3 +42,18 @@ variable "resources" {
     }
   }
 }
+
+variable "config_maps" {
+  description = "Names of additional config maps for env variables"
+  default     = []
+}
+
+variable "secrets" {
+  description = "Names of additional secrets for env variables"
+  default     = []
+}
+
+variable "rabbitmq_name" {
+  description = "If rabbitmq was deployed using the official operator and rabbitmq_amqp1_0 plugin, pass the name of the cluster to configure a connection using the default user."
+  default     = ""
+}

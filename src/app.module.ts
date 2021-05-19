@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { AppHealthIndicator } from './app.health';
 import { AppResolver } from './app.resolver';
 import { DatabaseModule } from './database/database.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { DatabaseModule } from './database/database.module';
       playground: true,
     }),
     DatabaseModule.register(),
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService, AppHealthIndicator, AppResolver],
