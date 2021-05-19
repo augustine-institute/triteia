@@ -70,7 +70,7 @@ resource "kubernetes_deployment" "main" {
               value_from {
                 secret_key_ref {
                   name = "${var.rabbitmq_name}-default-user"
-                  key  = env.key
+                  key  = env.value
                 }
               }
             }

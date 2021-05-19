@@ -12,7 +12,7 @@ A caching tool designed to assist with integrations and automation pipelines.
 
 ## Deployment Options
 
-[Terraform module for K8s deployment](tf/k8s)
+[Terraform module for K8s deployment](https://github.com/augustine-institute/triteia/tree/main/tf/k8s)
 
 
 ## Development
