@@ -14,6 +14,7 @@ services:
       DB_PORT: 3306
       DB_NAME: triteia
       AMQP_HOST: rabbit
+      AMQP_PORT: 5672
     env_file:
     - .env
     volumes:

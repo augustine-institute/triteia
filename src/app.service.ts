@@ -24,6 +24,7 @@ import {
   ListResponse,
 } from './schema';
 import { DatabaseService } from './database/database.service';
+import { AppEvents } from './events/app.events';
 import { DbDocument, DbEvent } from './database/interfaces';
 
 type AnyRecord = Record<string | number | symbol, unknown>;
@@ -32,12 +33,10 @@ type AnyRecord = Record<string | number | symbol, unknown>;
 export class AppService {
   private readonly logger = new Logger(AppService.name);
 
-  constructor(private readonly database: DatabaseService) {}
-
-  getHello(): string {
-    this.logger.debug('getHello()');
-    return 'Hello World!';
-  }
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly appEvents: AppEvents,
+  ) {}
 
   async initialize(collection: CollectionInput): Promise<Collection> {
     return this.database.initialize(collection);
@@ -73,62 +72,67 @@ export class AppService {
     input: DocumentInput,
     options?: { merge?: boolean },
   ): Promise<Document> {
-    let hasEvent = false;
+    return await this.database.withTransaction(async (conn) => {
+      let existing: DbDocument | null = null;
+      try {
+        existing = await conn.load(ref, true);
+        this.checkDates(existing, input);
 
-    const [document, event] = await this.database.withTransaction(
-      async (conn) => {
-        let existing: DbDocument | null;
-        try {
-          existing = await conn.load(ref, true);
-          this.checkDates(existing, input);
-
-          if (options?.merge && input.content) {
-            input.content = {
-              ...existing.content,
-              ...input.content,
-            };
-          }
-        } catch (error) {
-          if (error instanceof NotFoundException) {
-            existing = null;
-          } else {
-            throw error;
-          }
+        if (options?.merge && input.content) {
+          input.content = {
+            ...existing.content,
+            ...input.content,
+          };
         }
-
-        const document = existing
-          ? await conn.update(ref, input)
-          : await conn.create(ref.collection, input);
-
-        // calculate diff and save the event if something happened
-        let event = this.generateEvent(existing, document, input.event);
-        if (event.changes.length || event.name) {
-          event = await conn.createEvent(ref, event);
-          hasEvent = true;
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          existing = null;
+        } else {
+          throw error;
         }
+      }
 
-        return [document, event];
-      },
-    );
+      const dbDocument = existing
+        ? await conn.update(ref, input)
+        : await conn.create(ref.collection, input);
 
-    if (hasEvent) {
-      // TODO fire event
-    }
+      // calculate diff and save the event if something happened
+      let event = this.generateEvent(existing, dbDocument, input.event);
+      const significant = event.changes.length || event.name;
+      if (significant) {
+        event = await conn.createEvent(ref, event);
+      }
 
-    return {
-      ...this.fromDbDocument(ref.collection, document),
-      event,
-    };
+      const document = {
+        ...this.fromDbDocument(ref.collection, dbDocument),
+        event,
+      };
+
+      if (significant) {
+        await this.appEvents.emit('document', {
+          op: existing ? 'updated' : 'created',
+          document,
+        });
+      } else {
+        this.logger.debug(`Insignificant event on ${document.uri}`);
+      }
+      return document;
+    });
   }
 
   /** Set the deletedAt of a record. */
   async delete(ref: Ref, options?: DeleteOptions): Promise<Document> {
-    const document = await this.fromDbDocument(
-      ref.collection,
-      await this.database.delete(ref, options),
-    );
-    // TODO fire event
-    return document;
+    return await this.database.withTransaction(async (conn) => {
+      const document = this.fromDbDocument(
+        ref.collection,
+        await conn.delete(ref, options),
+      );
+      await this.appEvents.emit('document', {
+        op: 'deleted',
+        document,
+      });
+      return document;
+    });
   }
 
   async loadHistory(

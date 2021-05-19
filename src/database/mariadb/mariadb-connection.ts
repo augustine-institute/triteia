@@ -165,7 +165,8 @@ export class MariadbConnection implements DbConnection {
   }
 
   async delete(ref: Ref, options?: DeleteOptions): Promise<DbDocument> {
-    const existing = await this.load(ref, true);
+    // load existing and 404 if already deleted
+    const existing = await this.load(ref, false);
 
     const params: Array<string | Date> = [];
     let deletedAtExpr = 'now()';

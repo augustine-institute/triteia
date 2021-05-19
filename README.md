@@ -5,20 +5,38 @@ A caching tool designed to assist with integrations and automation pipelines.
 1. Provide an API abstraction layer to save or load cached data to/from the DB.
 2. Allow save and load cached data via Restful and GraphQL APIs.
 3. Publish subscribable events with data differentials when cached data is written
-    * Events would only be published if a record changed.
-    * Includes the new values and changes from previous.
+    * Events will only be published if the record content changed or the event was named.
+    * Includes the saved result and changes from previous.
     * Differences are expressed using JSON Patch.
 
 
-## Running the app
+## Deployment Options
+
+[Terraform module for K8s deployment](tf/k8s)
+
+
+## Development
 
 ```bash
-# development
 cp .env.default .env
 docker-compose up
 ```
 
-### REST Examples
+### Tests
+
+```bash
+# unit tests
+docker-compose run --rm --no-deps api npm run test
+
+# e2e tests
+docker-compose run --rm api npm run test:e2e
+
+# test coverage
+docker-compose run --rm api npm run test:cov
+```
+
+
+## REST Examples
 
 ```bash
 # initialize a collection of users
@@ -42,21 +60,3 @@ curl localhost:3000/collections/users/somewhere?globalId=4ebc7386-f87b-4e9a-8592
 # list record references in all systems with the same global id
 curl localhost:3000/collections/users?globalId=4ebc7386-f87b-4e9a-8592-f7b40977d119
 ```
-
-
-## Test
-
-```bash
-# unit tests
-docker-compose run --rm --no-deps api npm run test
-
-# e2e tests
-docker-compose run --rm api npm run test:e2e
-
-# test coverage
-docker-compose run --rm api npm run test:cov
-```
-
-
-## License
-
