@@ -38,11 +38,6 @@ export class AppService {
     private readonly appEvents: AppEvents,
   ) {}
 
-  getHello(): string {
-    this.logger.debug('getHello()');
-    return 'Hello World!';
-  }
-
   async initialize(collection: CollectionInput): Promise<Collection> {
     return this.database.initialize(collection);
   }

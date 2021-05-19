@@ -42,8 +42,16 @@ export class AppController {
   @Get()
   root(@Ip() ip = '') {
     this.logger.debug(`GET "/" requested from "${ip}"`);
-    // TODO should we use hateoas, json+hal?
-    return this.appService.getHello();
+    return {
+      name: 'Triteia',
+      _links: {
+        self: { href: '/' },
+        graphql: { href: '/graphql' },
+        collections: { href: '/collections' },
+        history: { href: '/history' },
+        health: { href: '/health' },
+      },
+    };
   }
 
   /** Used for health checks and causes shutdown. */
