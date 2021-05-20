@@ -4,14 +4,23 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { Connection, ConnectionEvents, EventContext } from 'rhea-promise';
+import {
+  Connection,
+  ConnectionEvents,
+  EventContext,
+  Message,
+  message,
+} from 'rhea-promise';
 import { hostname } from 'os';
 import { AppEvents, AppEventTypes } from './app.events';
+
+type AmqpSerializer = (body: unknown) => Message;
 
 /** Publishes significant events to an AMQP 1.0 compatible broker. */
 @Injectable()
 export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
   readonly targetPrefix = process.env.AMQP_TARGET_PREFIX || '/topic/triteia.';
+  readonly messageType = process.env.AMQP_MESSAGE_TYPE || 'json';
 
   private readonly logger = new Logger(AmqpPublisher.name);
 
@@ -24,6 +33,8 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     password: process.env.AMQP_PASSWORD,
     reconnect: true,
   });
+
+  private readonly serialize: AmqpSerializer;
 
   constructor(private readonly appEvents: AppEvents) {
     this.connection.on(
@@ -43,6 +54,13 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     this.connection.on(ConnectionEvents.error, (context: EventContext) => {
       this.logger.warn(context.error);
     });
+
+    if (this.messageType in amqpSerializers) {
+      this.serialize = amqpSerializers[this.messageType];
+    } else {
+      const supported = Object.keys(amqpSerializers).join(', ');
+      throw new Error(`Invalid AMQP_MESSAGE_TYPE; supported: ${supported}`);
+    }
   }
 
   async onModuleInit(): Promise<void> {
@@ -67,10 +85,24 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     // this seems to wait for delivery to a queue, but not for it to be received
     await sender.send({
       // message_id: '12343434343434',
-      body: document,
+      ...this.serialize(document),
     });
     this.logger.debug(`Event sent to ${address} for ${document.id}`);
 
     await sender.close();
   }
 }
+
+const amqpSerializers: Record<string, AmqpSerializer> = {
+  json(body) {
+    return {
+      content_type: 'application/json; charset=utf-8',
+      body: message.data_section(new Buffer(JSON.stringify(body), 'utf8')),
+    };
+  },
+
+  rhea(body) {
+    // the rhea library has it's own encoding that's only readable by rhea clients
+    return { body };
+  },
+};
