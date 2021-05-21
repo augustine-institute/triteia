@@ -1,3 +1,4 @@
+---
 version: '3.9'
 
 services:
@@ -7,7 +8,7 @@ services:
       context: .
       target: dev
     ports:
-    - 3000:3000
+      - 3000:3000
     environment:
       DB_VENDOR: mariadb
       DB_HOST: db
@@ -16,13 +17,13 @@ services:
       AMQP_HOST: rabbit
       AMQP_PORT: 5672
     env_file:
-    - .env
+      - .env
     volumes:
-    - ./src:/srv/app/src
-    - ./test:/srv/app/test
+      - ./src:/srv/app/src
+      - ./test:/srv/app/test
     depends_on:
-    - db
-    - rabbit
+      - db
+      - rabbit
 
   db:
     image: mariadb:10.5
@@ -34,15 +35,15 @@ services:
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
-    - db:/var/lib/mysql
+      - db:/var/lib/mysql
 
   rabbit:
     image: rabbitmq:3-management
     hostname: rabbit
     ports:
-    - 15672:15672
+      - 15672:15672
     volumes:
-    - ./.rabbitmq_plugins:/etc/rabbitmq/enabled_plugins
+      - ./.rabbitmq_plugins:/etc/rabbitmq/enabled_plugins
 
 volumes:
   db:
