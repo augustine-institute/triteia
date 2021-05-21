@@ -97,7 +97,7 @@ const amqpSerializers: Record<string, AmqpSerializer> = {
   json(body) {
     return {
       content_type: 'application/json; charset=utf-8',
-      body: message.data_section(new Buffer(JSON.stringify(body), 'utf8')),
+      body: message.data_section(Buffer.from(JSON.stringify(body), 'utf8')),
     };
   },
 
