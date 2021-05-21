@@ -94,6 +94,7 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
 }
 
 const amqpSerializers: Record<string, AmqpSerializer> = {
+  /** JSON encoded amqp-data body, (compatible with RabbitMQ's AMQP 0-9-1). */
   json(body) {
     return {
       content_type: 'application/json; charset=utf-8',
@@ -101,8 +102,8 @@ const amqpSerializers: Record<string, AmqpSerializer> = {
     };
   },
 
-  rhea(body) {
-    // the rhea library has it's own encoding that's only readable by rhea clients
+  /** Uses the AMQP 1.0 standard types with an amqp-value body. */
+  amqp(body) {
     return { body };
   },
 };
