@@ -16,4 +16,7 @@ resource "kubernetes_horizontal_pod_autoscaler" "main" {
     }
     target_cpu_utilization_percentage = 70
   }
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
+  }
 }

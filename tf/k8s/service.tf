@@ -2,7 +2,7 @@ resource "kubernetes_service" "main" {
   metadata {
     namespace = var.namespace
     name      = var.name
-    labels    = local.labels
+    labels    = merge(local.labels, var.service_labels)
   }
   spec {
     selector = local.labels
@@ -12,6 +12,9 @@ resource "kubernetes_service" "main" {
       port        = 80
       target_port = 3000
     }
+  }
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
   }
 }
 

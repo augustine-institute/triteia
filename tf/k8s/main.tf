@@ -18,7 +18,8 @@ resource "kubernetes_deployment" "main" {
 
     template {
       metadata {
-        labels = local.labels
+        labels      = local.labels
+        annotations = var.pod_annotations
       }
 
       spec {
@@ -106,7 +107,21 @@ resource "kubernetes_deployment" "main" {
             }
           }
         }
+        dynamic "topology_spread_constraint" {
+          for_each = var.topology_spread_constraints
+          content {
+            max_skew           = topology_spread_constraint.value.max_skew
+            topology_key       = topology_spread_constraint.value.topology_key
+            when_unsatisfiable = topology_spread_constraint.value.when_unsatisfiable
+            label_selector {
+              match_labels = local.labels
+            }
+          }
+        }
       }
     }
+  }
+  lifecycle {
+    ignore_changes = [metadata[0].annotations]
   }
 }

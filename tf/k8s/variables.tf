@@ -14,6 +14,15 @@ variable "additional_labels" {
   default = {}
 }
 
+variable "service_labels" {
+  default = {}
+}
+
+variable "pod_annotations" {
+  description = "annotations for pods such as `fluentbit.io/parser = nestjs`"
+  default     = {}
+}
+
 variable "image" {
   default = "augustineinstitute/triteia:latest"
 }
@@ -56,4 +65,12 @@ variable "secrets" {
 variable "rabbitmq_name" {
   description = "If rabbitmq was deployed using the official operator and rabbitmq_amqp1_0 plugin, pass the name of the cluster to configure a connection using the default user."
   default     = ""
+}
+
+variable "topology_spread_constraints" {
+  default = [{
+    topology_key       = "kubernetes.io/hostname"
+    max_skew           = 1
+    when_unsatisfiable = "ScheduleAnyway"
+  }]
 }
