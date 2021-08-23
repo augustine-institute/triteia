@@ -50,6 +50,7 @@ export class AppController {
         collections: { href: '/collections' },
         history: { href: '/history' },
         health: { href: '/health' },
+        metrics: { href: '/metrics' },
       },
     };
   }

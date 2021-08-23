@@ -2,6 +2,7 @@ import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { TerminusModule } from '@nestjs/terminus';
+import { PrometheusModule } from "@willsoto/nestjs-prometheus";
 import GraphQLJSON, { GraphQLJSONObject } from 'graphql-type-json';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -13,6 +14,7 @@ import { EventsModule } from './events/events.module';
 @Module({
   imports: [
     TerminusModule,
+    PrometheusModule.register(),
     GraphQLModule.forRoot({
       typePaths: ['./**/*.graphql'],
       ...(process.env.NODE_ENV === 'development' && {
