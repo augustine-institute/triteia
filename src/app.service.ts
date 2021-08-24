@@ -72,7 +72,7 @@ export class AppService {
     input: DocumentInput,
     options?: { merge?: boolean },
   ): Promise<Document> {
-    return await this.database.withTransaction(async (conn) => {
+    return await this.database.withTransactionAndRetry(async (conn) => {
       let existing: DbDocument | null = null;
       try {
         existing = await conn.load(ref, true, true);
@@ -122,7 +122,7 @@ export class AppService {
 
   /** Set the deletedAt of a record. */
   async delete(ref: Ref, options?: DeleteOptions): Promise<Document> {
-    return await this.database.withTransaction(async (conn) => {
+    return await this.database.withTransactionAndRetry(async (conn) => {
       const document = this.fromDbDocument(
         ref.collection,
         await conn.delete(ref, options),

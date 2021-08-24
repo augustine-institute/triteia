@@ -7,6 +7,8 @@ import { MariadbConnection } from './mariadb-connection';
 export class MariadbService
   extends DatabaseService
   implements BeforeApplicationShutdown {
+  protected retryDelay = 20;
+
   /** A pool of db connections */
   private readonly pool = mariadb.createPool({
     host: process.env.DB_HOST,
@@ -53,5 +55,16 @@ export class MariadbService
     } finally {
       if (conn) await conn.release();
     }
+  }
+
+  protected shouldRetry(error): boolean {
+    // TODO determine what other types errors should be retried
+    if (error instanceof mariadb.SqlError) {
+      if (error.errno === 1062) {
+        // we should only get a duplicate if an event timestamp matches exactly
+        return true;
+      }
+    }
+    return false;
   }
 }

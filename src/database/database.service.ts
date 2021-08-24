@@ -1,10 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { Ref, ListOptions, DeleteOptions, HistoryOptions } from '../interfaces';
-import { Change, Collection, CollectionInput, DocumentInput } from '../schema';
+import { Collection, CollectionInput, DocumentInput } from '../schema';
 import { DbConnection, DbDocument, DbEvent } from './interfaces';
 
 @Injectable()
 export abstract class DatabaseService implements DbConnection {
+  private readonly logger = new Logger(DatabaseService.name);
+
+  /** Milliseconds to wait between attempts. */
+  protected retryDelay = 0;
+
+  /** Maximum number of attempts for some db transaction. */
+  protected retryLimit = 5;
+
   abstract withTransaction<T>(
     duringTransaction: (conn: DbConnection) => Promise<T>,
   ): Promise<T>;
@@ -13,6 +26,41 @@ export abstract class DatabaseService implements DbConnection {
     return this.withTransaction((conn) => {
       return conn.initialize(input);
     });
+  }
+
+  async withTransactionAndRetry<T>(
+    duringTransaction: (conn: DbConnection) => Promise<T>,
+  ): Promise<T> {
+    const startTime = Date.now();
+    let lastError: Error | undefined;
+    for (let attempts = 0; attempts < this.retryLimit; attempts++) {
+      if (attempts && this.retryDelay) {
+        await new Promise((resolve) => setTimeout(resolve, this.retryDelay));
+      }
+      try {
+        return await this.withTransaction(duringTransaction);
+      } catch (error) {
+        if (!this.shouldRetry(error)) {
+          throw error;
+        }
+        this.logger.debug(`Failed transaction attempt: ${error.message}`);
+        lastError = error;
+      }
+    }
+    this.logger.warn(
+      `Failed transaction after ${this.retryLimit} attempts and ${
+        Date.now() - startTime
+      } ms`,
+    );
+    throw (
+      lastError ||
+      new InternalServerErrorException('Unexpected Error during Transaction')
+    );
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  protected shouldRetry(error): boolean {
+    return false;
   }
 
   async list(
