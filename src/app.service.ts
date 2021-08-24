@@ -75,7 +75,7 @@ export class AppService {
     return await this.database.withTransaction(async (conn) => {
       let existing: DbDocument | null = null;
       try {
-        existing = await conn.load(ref, true);
+        existing = await conn.load(ref, true, true);
         this.checkDates(existing, input);
 
         if (options?.merge && input.content) {

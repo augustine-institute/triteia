@@ -22,7 +22,7 @@ export interface DbConnection {
     options?: ListOptions,
   ): Promise<[DbDocument[], number?]>;
 
-  load(ref: Ref, deleted?: boolean): Promise<DbDocument>;
+  load(ref: Ref, deleted?: boolean, forUpdate?: boolean): Promise<DbDocument>;
 
   loadHistory(
     ref: Ref,

@@ -68,12 +68,13 @@ export class MariadbConnection implements DbConnection {
   async load(
     { collection, system, id }: Ref,
     deleted?: boolean,
+    forUpdate?: boolean,
   ): Promise<DbDocument> {
     const q = `SELECT *
       FROM ${this.conn.escapeId(collection)}
       WHERE system = ? AND id = ?
         ${deleted ? '' : 'AND deletedAt IS NULL'}
-      LIMIT 1`;
+      LIMIT 1 ${forUpdate ? 'FOR UPDATE' : ''}`;
     const results = await this.conn.query(q, [system, id]);
     if (!results?.[0]) {
       throw new NotFoundException();
@@ -166,7 +167,7 @@ export class MariadbConnection implements DbConnection {
 
   async delete(ref: Ref, options?: DeleteOptions): Promise<DbDocument> {
     // load existing and 404 if already deleted
-    const existing = await this.load(ref, false);
+    const existing = await this.load(ref, false, true);
 
     const params: Array<string | Date> = [];
     let deletedAtExpr = 'now()';
