@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  InternalServerErrorException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { Ref, ListOptions, DeleteOptions, HistoryOptions } from '../interfaces';
 import { Collection, CollectionInput, DocumentInput } from '../schema';
 import { DbConnection, DbDocument, DbEvent } from './interfaces';

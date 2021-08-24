@@ -6,7 +6,6 @@ import {
   HistoryOptions,
 } from '../../interfaces';
 import {
-  Change,
   ChangeOp,
   Collection,
   CollectionInput,

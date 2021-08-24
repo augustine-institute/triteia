@@ -6,12 +6,7 @@ import {
   DeleteOptions,
   HistoryOptions,
 } from '../../interfaces';
-import {
-  Change,
-  Collection,
-  CollectionInput,
-  DocumentInput,
-} from '../../schema';
+import { Collection, CollectionInput, DocumentInput } from '../../schema';
 import { DbConnection, DbDocument, DbEvent } from '../interfaces';
 
 export class MariadbConnection implements DbConnection {
