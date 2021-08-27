@@ -63,6 +63,9 @@ export class MariadbService
       if (error.errno === 1062) {
         // we should only get a duplicate if an event timestamp matches exactly
         return true;
+      } else if (error.errno === 1213) {
+        // Deadlock found when trying to get lock; try restarting transaction
+        return true;
       }
     }
     return false;

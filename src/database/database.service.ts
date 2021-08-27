@@ -38,7 +38,9 @@ export abstract class DatabaseService implements DbConnection {
         if (!this.shouldRetry(error)) {
           throw error;
         }
-        this.logger.debug(`Failed transaction attempt: ${error.message}`);
+        this.logger.debug(
+          `Failed transaction attempt: ${error.message.replace(/\n/g, ' ')}`,
+        );
         lastError = error;
       }
     }

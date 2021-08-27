@@ -65,6 +65,7 @@ export class MariadbConnection implements DbConnection {
     deleted?: boolean,
     forUpdate?: boolean,
   ): Promise<DbDocument> {
+    // FIXME the FOR UPDATE is not locking rows that don't exist, which can cause a deadlock during insert
     const q = `SELECT *
       FROM ${this.conn.escapeId(collection)}
       WHERE system = ? AND id = ?
@@ -137,12 +138,9 @@ export class MariadbConnection implements DbConnection {
   }
 
   async create(collection: string, input: DocumentInput): Promise<DbDocument> {
-    const { system, id } = input;
-    const ref = { collection, system, id };
     const data = this.cleanDocumentInput(input);
-
-    await this.doInsert(collection, data);
-    return this.load(ref, true);
+    const result = await this.doInsert(collection, data);
+    return result?.[0];
   }
 
   async update(ref: Ref, input: DocumentInput): Promise<DbDocument> {
@@ -208,9 +206,8 @@ export class MariadbConnection implements DbConnection {
       ...(event.name && { name: event.name }),
     };
 
-    await this.doInsert(`${collection}Events`, data);
-    const history = await this.loadHistory(ref, { pageSize: 1 });
-    return history?.[0]?.[0];
+    const result = await this.doInsert(`${collection}Events`, data);
+    return result?.[0];
   }
 
   protected formatDatetime(date: string | Date) {
@@ -266,7 +263,9 @@ export class MariadbConnection implements DbConnection {
     const columns = Object.keys(data).map((k) => this.conn.escapeId(k));
     return this.conn.query(
       `INSERT INTO ${table} (${columns.join(',')})
-       VALUES (${Array(columns.length).fill('?').join(',')})`,
+       VALUES (${Array(columns.length).fill('?').join(',')})
+       RETURNING *
+      `,
       Object.values(data),
     );
   }
