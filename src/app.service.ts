@@ -92,12 +92,13 @@ export class AppService {
         }
       }
 
+      const { event: eventInput, ...docInput } = input;
       const dbDocument = existing
-        ? await conn.update(ref, input)
-        : await conn.create(ref.collection, input);
+        ? await conn.update(ref, docInput)
+        : await conn.create(ref.collection, docInput);
 
       // calculate diff and save the event if something happened
-      let event = this.generateEvent(existing, dbDocument, input.event);
+      let event = this.generateEvent(existing, dbDocument, eventInput);
       const significant = event.changes.length || event.name;
       if (significant) {
         event = await conn.createEvent(ref, event);
