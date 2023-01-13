@@ -1,4 +1,4 @@
-FROM node:14-alpine as dev
+FROM node:14 as dev
 
 RUN mkdir -p /srv/app
 WORKDIR /srv/app
@@ -23,18 +23,17 @@ RUN npm prune --production
 
 
 # production/server image
-FROM node:14-alpine
-
-RUN mkdir -p /srv/app
+FROM gcr.io/distroless/nodejs:14
 WORKDIR /srv/app
-USER 1000
 EXPOSE 3000
 
 ENV NODE_ENV=production
-CMD ["node", "dist/main.js"]
+CMD ["dist/main.js"]
 
 # copy built files (including built native node_modules)
 COPY package.json package-lock.json /srv/app/
 COPY --from=builder /srv/app/node_modules/ /srv/app/node_modules/
 COPY --from=builder /srv/app/src/schema/*.graphql /srv/app/dist/schema/
 COPY --from=builder /srv/app/dist/ /srv/app/dist/
+
+USER 65532

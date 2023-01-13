@@ -45,5 +45,6 @@ services:
     volumes:
       - ./.rabbitmq_plugins:/etc/rabbitmq/enabled_plugins
 
+
 volumes:
   db:
