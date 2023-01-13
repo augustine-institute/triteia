@@ -72,8 +72,10 @@ export class AppService {
     input: DocumentInput,
     options?: { merge?: boolean },
   ): Promise<Document> {
-    return await this.database.withTransactionAndRetry(async (conn) => {
-      let existing: DbDocument | null = null;
+    let existing: DbDocument | null = null;
+    let significant: number | string | undefined | null = null;
+
+    const document =  await this.database.withTransactionAndRetry(async (conn) => {
       try {
         existing = await conn.load(ref, true, true);
         this.checkDates(existing, input);
@@ -99,7 +101,7 @@ export class AppService {
 
       // calculate diff and save the event if something happened
       let event = this.generateEvent(existing, dbDocument, eventInput);
-      const significant = event.changes.length || event.name;
+      significant = event.changes.length || event.name;
       if (significant) {
         event = await conn.createEvent(ref, event);
       }
@@ -109,31 +111,38 @@ export class AppService {
         event,
       };
 
-      if (significant) {
-        await this.appEvents.emit('document', {
-          op: existing ? 'updated' : 'created',
-          document,
-        });
-      } else {
-        this.logger.debug(`Insignificant event on ${document.uri}`);
-      }
       return document;
     });
+
+    if (significant) {
+      await this.appEvents.emit('document', {
+        op: existing ? 'updated' : 'created',
+        document,
+      });
+    } else {
+      this.logger.debug(`Insignificant event on ${document.uri}`);
+    }
+
+    return document
   }
 
   /** Set the deletedAt of a record. */
   async delete(ref: Ref, options?: DeleteOptions): Promise<Document> {
-    return await this.database.withTransactionAndRetry(async (conn) => {
+    const document = await this.database.withTransactionAndRetry(async (conn) => {
       const document = this.fromDbDocument(
         ref.collection,
         await conn.delete(ref, options),
       );
-      await this.appEvents.emit('document', {
-        op: 'deleted',
-        document,
-      });
+
       return document;
     });
+
+    await this.appEvents.emit('document', {
+      op: 'deleted',
+      document,
+    });
+
+    return document;
   }
 
   async loadHistory(
