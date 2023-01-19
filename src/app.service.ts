@@ -225,7 +225,11 @@ export class AppService {
 
     return {
       name: input?.name,
-      at: after.updatedAt,
+      at:
+        before && before.updatedAt === after.updatedAt
+          ? // no changes including updatedAt; use the current time for a unique `at`
+            new Date()
+          : after.updatedAt,
       changes: changes as Change[],
     };
   }
