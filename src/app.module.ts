@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { TerminusModule } from '@nestjs/terminus';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import GraphQLJSON, { GraphQLJSONObject } from 'graphql-type-json';
@@ -15,7 +16,8 @@ import { EventsModule } from './events/events.module';
   imports: [
     TerminusModule,
     PrometheusModule.register(),
-    GraphQLModule.forRoot({
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
       typePaths: ['./**/*.graphql'],
       ...(process.env.NODE_ENV === 'development' && {
         definitions: {

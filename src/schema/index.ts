@@ -1,12 +1,13 @@
 
 /*
- * ------------------------------------------------------
+ * -------------------------------------------------------
  * THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
  * -------------------------------------------------------
  */
 
 /* tslint:disable */
 /* eslint-disable */
+
 export enum ChangeOp {
     add = "add",
     replace = "replace",
@@ -23,18 +24,18 @@ export class CollectionInput {
 export class DocumentInput {
     system: string;
     id: string;
-    globalId?: string;
-    name?: string;
-    date?: Date;
-    content?: JSONObject;
-    createdAt?: Date;
-    updatedAt?: Date;
-    deletedAt?: Date;
-    event?: EventInput;
+    globalId?: Nullable<string>;
+    name?: Nullable<string>;
+    date?: Nullable<Date>;
+    content?: Nullable<JSONObject>;
+    createdAt?: Nullable<Date>;
+    updatedAt?: Nullable<Date>;
+    deletedAt?: Nullable<Date>;
+    event?: Nullable<EventInput>;
 }
 
 export class EventInput {
-    name?: string;
+    name?: Nullable<string>;
 }
 
 export class Collection {
@@ -46,56 +47,57 @@ export class Document {
     collection: string;
     system: string;
     id: string;
-    globalId?: string;
-    name?: string;
-    date?: Date;
-    content?: JSONObject;
+    globalId?: Nullable<string>;
+    name?: Nullable<string>;
+    date?: Nullable<Date>;
+    content?: Nullable<JSONObject>;
     createdAt: Date;
     updatedAt: Date;
-    deletedAt?: Date;
-    event?: Event;
-    events?: Event[];
-    related?: Document[];
+    deletedAt?: Nullable<Date>;
+    event?: Nullable<Event>;
+    events?: Nullable<Event[]>;
+    related?: Nullable<Document[]>;
 }
 
 export class Event {
     at: Date;
     changes: Change[];
-    name?: string;
+    name?: Nullable<string>;
 }
 
 export class Change {
     op: ChangeOp;
-    from?: string;
+    from?: Nullable<string>;
     path: string;
-    value?: JSON;
+    value?: Nullable<JSON>;
 }
 
 export abstract class IMutation {
     abstract initialize(input: CollectionInput): Collection | Promise<Collection>;
 
-    abstract save(collection: string, input: DocumentInput, merge?: boolean): Document | Promise<Document>;
+    abstract save(collection: string, input: DocumentInput, merge?: Nullable<boolean>): Document | Promise<Document>;
 
-    abstract delete(uri: string, deletedAt?: Date): Document | Promise<Document>;
+    abstract delete(uri: string, deletedAt?: Nullable<Date>): Document | Promise<Document>;
 }
 
 export abstract class IQuery {
-    abstract list(collection: string, system?: string, globalId?: string, pageToken?: number, pageSize?: number, deleted?: boolean): ListResponse | Promise<ListResponse>;
+    abstract list(collection: string, system?: Nullable<string>, globalId?: Nullable<string>, pageToken?: Nullable<number>, pageSize?: Nullable<number>, deleted?: Nullable<boolean>): ListResponse | Promise<ListResponse>;
 
-    abstract load(uri: string, deleted?: boolean, at?: Date): Document | Promise<Document>;
+    abstract load(uri: string, deleted?: Nullable<boolean>, at?: Nullable<Date>): Document | Promise<Document>;
 
-    abstract history(uri: string, pageToken?: string, pageSize?: number, asc?: boolean): HistoryResponse | Promise<HistoryResponse>;
+    abstract history(uri: string, pageToken?: Nullable<string>, pageSize?: Nullable<number>, asc?: Nullable<boolean>): HistoryResponse | Promise<HistoryResponse>;
 }
 
 export class ListResponse {
     documents: Document[];
-    nextPageToken?: number;
+    nextPageToken?: Nullable<number>;
 }
 
 export class HistoryResponse {
     events: Event[];
-    nextPageToken?: string;
+    nextPageToken?: Nullable<string>;
 }
 
 export type JSON = any;
 export type JSONObject = any;
+type Nullable<T> = T | null;

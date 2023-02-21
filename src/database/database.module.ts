@@ -1,5 +1,4 @@
 import { DynamicModule, Module } from '@nestjs/common';
-import { DatabaseService } from './database.service';
 
 @Module({})
 export class DatabaseModule {
@@ -15,8 +14,7 @@ export class DatabaseModule {
     return {
       module: DatabaseModule,
       imports: [dbModuleClass],
-      providers: [{ provide: DatabaseService, useExisting: `${name}Service` }],
-      exports: [DatabaseService],
+      exports: [dbModuleClass],
     };
   }
 }
