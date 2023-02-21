@@ -19,7 +19,10 @@ export class MariadbConnection implements DbConnection {
    */
   private readonly partitioned = process.env?.DB_PARTITIONED === 'true';
 
-  constructor(private conn: mariadb.Connection) {}
+  constructor(
+    private readonly conn: mariadb.Connection,
+    public readonly inTransaction = false,
+  ) {}
 
   async initialize({ id }: CollectionInput): Promise<Collection> {
     await this.createDocumentTable(id);
@@ -65,7 +68,6 @@ export class MariadbConnection implements DbConnection {
     deleted?: boolean,
     forUpdate?: boolean,
   ): Promise<DbDocument> {
-    // FIXME the FOR UPDATE is not locking rows that don't exist, which can cause a deadlock during insert
     const q = `SELECT *
       FROM ${this.conn.escapeId(collection)}
       WHERE system = ? AND id = ?
@@ -73,6 +75,12 @@ export class MariadbConnection implements DbConnection {
       LIMIT 1 ${forUpdate ? 'FOR UPDATE' : ''}`;
     const results = await this.conn.query(q, [system, id]);
     if (!results?.[0]) {
+      if (forUpdate && this.inTransaction) {
+        // release the lock, so that we don't run into a deadlock with inserts
+        // mariadb/mysql locks a block of ids, instead of a single row when it doesn't exist
+        await this.conn.commit();
+        await this.conn.beginTransaction();
+      }
       throw new NotFoundException();
     }
     return results[0];

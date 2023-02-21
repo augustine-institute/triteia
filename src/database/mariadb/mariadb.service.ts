@@ -45,7 +45,9 @@ export class MariadbService
       conn = await this.pool.getConnection();
       await conn.beginTransaction();
 
-      const results = await duringTransaction(new MariadbConnection(conn));
+      const results = await duringTransaction(
+        new MariadbConnection(conn, true),
+      );
 
       await conn.commit();
       return results;
