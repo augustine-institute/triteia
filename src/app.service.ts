@@ -75,44 +75,46 @@ export class AppService {
     let existing: DbDocument | null = null;
     let significant: number | string | undefined | null = null;
 
-    const document =  await this.database.withTransactionAndRetry(async (conn) => {
-      try {
-        existing = await conn.load(ref, true, true);
-        this.checkDates(existing, input);
+    const document = await this.database.withTransactionAndRetry(
+      async (conn) => {
+        try {
+          existing = await conn.load(ref, true, true);
+          this.checkDates(existing, input);
 
-        if (options?.merge && input.content) {
-          input.content = {
-            ...existing.content,
-            ...input.content,
-          };
+          if (options?.merge && input.content) {
+            input.content = {
+              ...existing.content,
+              ...input.content,
+            };
+          }
+        } catch (error) {
+          if (error instanceof NotFoundException) {
+            existing = null;
+          } else {
+            throw error;
+          }
         }
-      } catch (error) {
-        if (error instanceof NotFoundException) {
-          existing = null;
-        } else {
-          throw error;
+
+        const { event: eventInput, ...docInput } = input;
+        const dbDocument = existing
+          ? await conn.update(ref, docInput)
+          : await conn.create(ref.collection, docInput);
+
+        // calculate diff and save the event if something happened
+        let event = this.generateEvent(existing, dbDocument, eventInput);
+        significant = event.changes.length || event.name;
+        if (significant) {
+          event = await conn.createEvent(ref, event);
         }
-      }
 
-      const { event: eventInput, ...docInput } = input;
-      const dbDocument = existing
-        ? await conn.update(ref, docInput)
-        : await conn.create(ref.collection, docInput);
+        const document = {
+          ...this.fromDbDocument(ref.collection, dbDocument),
+          event,
+        };
 
-      // calculate diff and save the event if something happened
-      let event = this.generateEvent(existing, dbDocument, eventInput);
-      significant = event.changes.length || event.name;
-      if (significant) {
-        event = await conn.createEvent(ref, event);
-      }
-
-      const document = {
-        ...this.fromDbDocument(ref.collection, dbDocument),
-        event,
-      };
-
-      return document;
-    });
+        return document;
+      },
+    );
 
     if (significant) {
       await this.appEvents.emit('document', {
@@ -123,19 +125,21 @@ export class AppService {
       this.logger.debug(`Insignificant event on ${document.uri}`);
     }
 
-    return document
+    return document;
   }
 
   /** Set the deletedAt of a record. */
   async delete(ref: Ref, options?: DeleteOptions): Promise<Document> {
-    const document = await this.database.withTransactionAndRetry(async (conn) => {
-      const document = this.fromDbDocument(
-        ref.collection,
-        await conn.delete(ref, options),
-      );
+    const document = await this.database.withTransactionAndRetry(
+      async (conn) => {
+        const document = this.fromDbDocument(
+          ref.collection,
+          await conn.delete(ref, options),
+        );
 
-      return document;
-    });
+        return document;
+      },
+    );
 
     await this.appEvents.emit('document', {
       op: 'deleted',
