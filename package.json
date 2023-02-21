@@ -1,6 +1,6 @@
 {
   "name": "triteia",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "A caching tool designed to assist with integrations and automation pipelines.",
   "homepage": "https://github.com/augustine-institute/triteia#readme",
   "repository": "github:augustine-institute/triteia",
