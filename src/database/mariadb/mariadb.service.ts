@@ -8,6 +8,7 @@ export class MariadbService
   extends DatabaseService
   implements BeforeApplicationShutdown {
   protected retryDelay = 20;
+  protected CONNECTION_LIMIT = process.env.DB_CONNECTION_LIMIT;
 
   /** A pool of db connections */
   private readonly pool = mariadb.createPool({
@@ -16,7 +17,9 @@ export class MariadbService
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    connectionLimit: 3,
+    connectionLimit: this.CONNECTION_LIMIT ? Number(this.CONNECTION_LIMIT) : 10,
+    socketTimeout: 30000,
+    connectTimeout: 30000,
   });
 
   async beforeApplicationShutdown(): Promise<void> {
