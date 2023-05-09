@@ -18,8 +18,6 @@ export class MariadbService
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     connectionLimit: this.CONNECTION_LIMIT ? Number(this.CONNECTION_LIMIT) : 10,
-    socketTimeout: 30000,
-    connectTimeout: 30000,
   });
 
   async beforeApplicationShutdown(): Promise<void> {
