@@ -10,9 +10,8 @@ services:
     ports:
       - 3000:3000
     environment:
-      DB_VENDOR: mariadb
-      DB_HOST: db
-      DB_PORT: 3306
+      DB_VENDOR: ${DB_VENDOR:-mariadb}
+      DB_HOST: ${DB_VENDOR:-mariadb}
       DB_NAME: triteia
       AMQP_HOST: rabbit
       AMQP_PORT: 5672
@@ -22,10 +21,10 @@ services:
       - ./src:/srv/app/src
       - ./test:/srv/app/test
     depends_on:
-      - db
+      - ${DB_VENDOR:-mariadb}
       - rabbit
 
-  db:
+  mariadb:
     image: mariadb:10.5
     command: mysqld --bind-address=0.0.0.0
     environment:
@@ -36,6 +35,17 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
       - db:/var/lib/mysql
+
+  postgres:
+    image: ghcr.io/cloudnative-pg/postgresql:15.1
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: triteia
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
 
   rabbit:
     image: rabbitmq:3-management
@@ -48,3 +58,4 @@ services:
 
 volumes:
   db:
+  postgres:
