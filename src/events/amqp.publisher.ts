@@ -10,6 +10,8 @@ import {
   EventContext,
   Message,
   message,
+  Session,
+  AwaitableSender,
 } from 'rhea-promise';
 import { hostname } from 'os';
 import { AppEvents, AppEventTypes } from './app.events';
@@ -21,18 +23,31 @@ type AmqpSerializer = (body: unknown) => Message;
 export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
   readonly targetPrefix = process.env.AMQP_TARGET_PREFIX || '/topic/triteia.';
   readonly messageType = process.env.AMQP_MESSAGE_TYPE || 'json';
+  /**
+   * Close senders after a certain amount of time in seconds.
+   *
+   * There should be a small number of collections and systems,
+   * so they can be safely reused with very little resource usage until shutdown.
+   **/
+  readonly senderLifetime = process.env.AMQP_SENDER_LIFETIME
+    ? Number(process.env.AMQP_SENDER_LIFETIME)
+    : undefined;
 
   private readonly logger = new Logger(AmqpPublisher.name);
 
   private readonly connection: Connection = new Connection({
     container_id: hostname(),
     host: process.env.AMQP_HOST,
-    port: process.env.AMQP_PORT ? parseInt(process.env.AMQP_PORT) : 5671,
+    port: process.env.AMQP_PORT ? Number(process.env.AMQP_PORT) : 5671,
     transport: process.env.AMQP_TRANSPORT as 'tcp' | 'tls' | 'ssl' | undefined,
     username: process.env.AMQP_USERNAME,
     password: process.env.AMQP_PASSWORD,
     reconnect: true,
   });
+  /** Use a single session because nodejs is single-threaded. */
+  private session: Session | undefined;
+  /** Reuse one sender per address. */
+  private readonly senders: Record<string, Promise<AwaitableSender>> = {};
 
   private readonly serialize: AmqpSerializer;
 
@@ -68,19 +83,19 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
       this.connection.open(),
       this.appEvents.on('document', async (event) => this.emit(event)),
     ]);
+    this.session = await this.connection.createSession();
   }
 
   async onModuleDestroy(): Promise<void> {
+    if (this.session && !this.session.isClosed()) {
+      await this.session.close();
+    }
     await this.connection.close();
   }
 
   async emit({ op, document }: AppEventTypes['document']) {
     const address = `${this.targetPrefix}${document.collection}.${document.system}.${op}`;
-    const sender = await this.connection.createAwaitableSender({
-      // name: senderName,
-      target: { address },
-      sendTimeoutInSeconds: 10,
-    });
+    const sender = await this.getSender(address);
 
     // this seems to wait for delivery to a queue, but not for it to be received
     await sender.send({
@@ -88,8 +103,42 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
       ...this.serialize(document),
     });
     this.logger.debug(`Event sent to ${address} for ${document.id}`);
+  }
 
-    await sender.close();
+  private async getSender(address: string): Promise<AwaitableSender> {
+    let sender = await this.senders[address];
+    if (sender && !sender.isClosed()) {
+      return sender;
+    }
+
+    if (!this.session) {
+      throw new Error('AMQP session not initialized');
+    } else if (this.session.isClosed()) {
+      this.logger.warn('AMQP session closed; opening new session');
+      this.session = await this.connection.createSession();
+    }
+
+    const senderPromise = this.session.createAwaitableSender({
+      // name: senderName,
+      target: { address },
+      sendTimeoutInSeconds: 10,
+    });
+    this.senders[address] = senderPromise;
+    sender = await senderPromise;
+    this.logger.debug(`Sender created: ${sender.name} for ${address}`);
+
+    if (this.senderLifetime) {
+      setTimeout(() => this.closeSender(sender), 1000 * this.senderLifetime);
+    }
+
+    return sender;
+  }
+
+  private async closeSender(sender: AwaitableSender): Promise<void> {
+    const address = sender.target?.address || sender.address;
+    delete this.senders[address];
+    await sender.close({ closeSession: false });
+    this.logger.debug(`Sender closed: ${sender.name} for ${address}`);
   }
 }
 
