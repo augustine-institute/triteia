@@ -1,4 +1,4 @@
-FROM node:18 as dev
+FROM node:22 as dev
 
 RUN mkdir -p /srv/app
 WORKDIR /srv/app
@@ -23,7 +23,7 @@ RUN npm prune --production
 
 
 # production/server image
-FROM gcr.io/distroless/nodejs:18
+FROM gcr.io/distroless/nodejs:22
 WORKDIR /srv/app
 EXPOSE 3000
 

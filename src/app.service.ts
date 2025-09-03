@@ -117,6 +117,7 @@ export class AppService {
     );
 
     if (significant) {
+      // FIXME this might need to go in the transaction, so events can't be missed and then ignored on retries as insignificant
       await this.appEvents.emit('document', {
         op: existing ? 'updated' : 'created',
         document,

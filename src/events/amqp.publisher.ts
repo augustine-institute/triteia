@@ -12,6 +12,7 @@ import {
   message,
   Session,
   AwaitableSender,
+  SendOperationFailedError,
 } from 'rhea-promise';
 import { hostname } from 'os';
 import { AppEvents, AppEventTypes } from './app.events';
@@ -39,7 +40,9 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     container_id: hostname(),
     host: process.env.AMQP_HOST,
     port: process.env.AMQP_PORT ? Number(process.env.AMQP_PORT) : 5671,
-    transport: process.env.AMQP_TRANSPORT as 'tcp' | 'tls' | 'ssl' | undefined,
+    // FIXME upgrade typescript and fix type
+    //transport: process.env.AMQP_TRANSPORT as 'tcp' | 'tls' | 'ssl' | undefined,
+    transport: process.env.AMQP_TRANSPORT as any,
     username: process.env.AMQP_USERNAME,
     password: process.env.AMQP_PASSWORD,
     reconnect: true,
@@ -55,14 +58,16 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     this.connection.on(
       ConnectionEvents.connectionOpen,
       ({ connection }: EventContext) => {
-        const { host, port } = connection.options;
+        // FIXME upgrade typescript and fix type
+        const { host, port } = connection.options as any;
         this.logger.debug(`Connected to ${host}:${port}`);
       },
     );
     this.connection.on(
       ConnectionEvents.connectionClose,
       ({ connection }: EventContext) => {
-        const { host, port } = connection.options;
+        // FIXME upgrade typescript and fix type
+        const { host, port } = connection.options as any;
         this.logger.debug(`Closed connection to ${host}:${port}`);
       },
     );
@@ -98,11 +103,20 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     const sender = await this.getSender(address);
 
     // this seems to wait for delivery to a queue, but not for it to be received
-    await sender.send({
-      // message_id: '12343434343434',
-      ...this.serialize(document),
-    });
-    this.logger.debug(`Event sent to ${address} for ${document.id}`);
+    try {
+      await sender.send(this.serialize(document), {
+        timeoutInSeconds: 10,
+      });
+      this.logger.debug(`Event sent to ${address} for ${document.id}`);
+    } catch (err) {
+      if (err instanceof SendOperationFailedError && err.code === 'released') {
+        this.logger.warn(
+          `Event sent to ${address} for ${document.id} was released (no subscribers to topic)`,
+        );
+        return;
+      }
+      throw err;
+    }
   }
 
   private async getSender(address: string): Promise<AwaitableSender> {
@@ -121,7 +135,6 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     const senderPromise = this.session.createAwaitableSender({
       // name: senderName,
       target: { address },
-      sendTimeoutInSeconds: 10,
     });
     this.senders[address] = senderPromise;
     sender = await senderPromise;
