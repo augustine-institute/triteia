@@ -23,7 +23,7 @@ RUN npm prune --production
 
 
 # production/server image
-FROM gcr.io/distroless/nodejs:22
+FROM gcr.io/distroless/nodejs22-debian12
 WORKDIR /srv/app
 EXPOSE 3000
 
