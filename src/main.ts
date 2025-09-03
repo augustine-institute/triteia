@@ -7,6 +7,8 @@ async function bootstrap() {
   app.use(express.json({ limit: '20mb' }));
   app.use(express.urlencoded({ extended: true, limit: '20mb' }));
   app.enableShutdownHooks();
-  await app.listen(3000);
+  await app.listen(
+    (process.env.PORT && parseInt(process.env.PORT, 10)) || 3000,
+  );
 }
 bootstrap();
