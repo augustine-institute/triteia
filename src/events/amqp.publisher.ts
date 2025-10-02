@@ -49,6 +49,9 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
   });
   /** Use a single session because nodejs is single-threaded. */
   private session: Session | undefined;
+  /** Ensure only one session is opened at a time. */
+  private pendingSession: Promise<Session> | undefined;
+
   /** Reuse one sender per address. */
   private readonly senders: Record<string, Promise<AwaitableSender>> = {};
 
@@ -60,7 +63,7 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
       ({ connection }: EventContext) => {
         // FIXME upgrade typescript and fix type
         const { host, port } = connection.options as any;
-        this.logger.debug(`Connected to ${host}:${port}`);
+        this.logger.log(`Connected to ${host}:${port}`);
       },
     );
     this.connection.on(
@@ -68,11 +71,19 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
       ({ connection }: EventContext) => {
         // FIXME upgrade typescript and fix type
         const { host, port } = connection.options as any;
-        this.logger.debug(`Closed connection to ${host}:${port}`);
+        if (this.session) {
+          this.logger.warn(
+            `Connection to ${host}:${port} closed with open session`,
+          );
+          this.session.remove();
+          this.session = undefined;
+        } else {
+          this.logger.log(`Closed connection to ${host}:${port}`);
+        }
       },
     );
     this.connection.on(ConnectionEvents.error, (context: EventContext) => {
-      this.logger.warn(context.error);
+      this.logger.warn('Connection error', context.error?.stack);
     });
 
     if (this.messageType in amqpSerializers) {
@@ -88,12 +99,13 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
       this.connection.open(),
       this.appEvents.on('document', async (event) => this.emit(event)),
     ]);
-    this.session = await this.connection.createSession();
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.session && !this.session.isClosed()) {
+    this.logger.debug(`Shutting down`);
+    if (this.session) {
       await this.session.close();
+      this.session = undefined;
     }
     await this.connection.close();
   }
@@ -119,20 +131,46 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  private async getOpenSession(): Promise<Session> {
+    if (this.session) {
+      if (this.session.isClosed()) {
+        this.logger.warn('Session is unexpectedly closed; opening new session');
+        this.session.remove();
+        this.session = undefined;
+      } else {
+        return this.session;
+      }
+    }
+
+    if (this.pendingSession) {
+      return await this.pendingSession;
+    }
+
+    try {
+      this.pendingSession = this.createSession();
+      this.session = await this.pendingSession;
+    } finally {
+      this.pendingSession = undefined;
+    }
+    return this.session;
+  }
+
+  private async createSession(): Promise<Session> {
+    if (!this.connection.isOpen()) {
+      this.logger.debug('Reconnecting...');
+      await this.connection.open();
+    }
+    return await this.connection.createSession();
+  }
+
   private async getSender(address: string): Promise<AwaitableSender> {
     let sender = await this.senders[address];
     if (sender && !sender.isClosed()) {
       return sender;
     }
 
-    if (!this.session) {
-      throw new Error('AMQP session not initialized');
-    } else if (this.session.isClosed()) {
-      this.logger.warn('AMQP session closed; opening new session');
-      this.session = await this.connection.createSession();
-    }
-
-    const senderPromise = this.session.createAwaitableSender({
+    const session = await this.getOpenSession();
+    const senderPromise = session.createAwaitableSender({
       // name: senderName,
       target: { address },
     });
