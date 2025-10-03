@@ -72,82 +72,69 @@ export class AppService {
     input: DocumentInput,
     options?: { merge?: boolean },
   ): Promise<Document> {
-    let existing: DbDocument | null = null;
-    let significant: number | string | undefined | null = null;
+    return await this.database.withTransactionAndRetry(async (conn) => {
+      let existing: DbDocument | null = null;
+      try {
+        existing = await conn.load(ref, true, true);
+        this.checkDates(existing, input);
 
-    const document = await this.database.withTransactionAndRetry(
-      async (conn) => {
-        try {
-          existing = await conn.load(ref, true, true);
-          this.checkDates(existing, input);
-
-          if (options?.merge && input.content) {
-            input.content = {
-              ...existing.content,
-              ...input.content,
-            };
-          }
-        } catch (error) {
-          if (error instanceof NotFoundException) {
-            existing = null;
-          } else {
-            throw error;
-          }
+        if (options?.merge && input.content) {
+          input.content = {
+            ...existing.content,
+            ...input.content,
+          };
         }
-
-        const { event: eventInput, ...docInput } = input;
-        const dbDocument = existing
-          ? await conn.update(ref, docInput)
-          : await conn.create(ref.collection, docInput);
-
-        // calculate diff and save the event if something happened
-        let event = this.generateEvent(existing, dbDocument, eventInput || undefined);
-        significant = event.changes.length || event.name;
-        if (significant) {
-          event = await conn.createEvent(ref, event);
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          existing = null;
+        } else {
+          throw error;
         }
+      }
 
-        const document = {
-          ...this.fromDbDocument(ref.collection, dbDocument),
-          event,
-        };
+      const { event: eventInput, ...docInput } = input;
+      const dbDocument = existing
+        ? await conn.update(ref, docInput)
+        : await conn.create(ref.collection, docInput);
 
-        return document;
-      },
-    );
+      // calculate diff and save the event if something happened
+      let event = this.generateEvent(existing, dbDocument, eventInput || undefined);
+      const significant = event.changes.length || event.name;
+      if (significant) {
+        event = await conn.createEvent(ref, event);
+      }
 
-    if (significant) {
-      // FIXME this might need to go in the transaction, so events can't be missed and then ignored on retries as insignificant
-      await this.appEvents.emit('document', {
-        op: existing ? 'updated' : 'created',
-        document,
-      });
-    } else {
-      this.logger.debug(`Insignificant event on ${document.uri}`);
-    }
+      const document = {
+        ...this.fromDbDocument(ref.collection, dbDocument),
+        event,
+      };
 
-    return document;
+      if (significant) {
+        await this.appEvents.emit('document', {
+          op: existing ? 'updated' : 'created',
+          document,
+        });
+      } else {
+        this.logger.debug(`Insignificant event on ${document.uri}`);
+      }
+
+      return document;
+    });
   }
 
   /** Set the deletedAt of a record. */
   async delete(ref: Ref, options?: DeleteOptions): Promise<Document> {
-    const document = await this.database.withTransactionAndRetry(
-      async (conn) => {
-        const document = this.fromDbDocument(
-          ref.collection,
-          await conn.delete(ref, options),
-        );
-
-        return document;
-      },
-    );
-
-    await this.appEvents.emit('document', {
-      op: 'deleted',
-      document,
+    return await this.database.withTransactionAndRetry(async (conn) => {
+      const document = this.fromDbDocument(
+        ref.collection,
+        await conn.delete(ref, options),
+      );
+      await this.appEvents.emit('document', {
+        op: 'deleted',
+        document,
+      });
+      return document;
     });
-
-    return document;
   }
 
   async loadHistory(
