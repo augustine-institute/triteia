@@ -15,6 +15,8 @@ services:
       DB_NAME: triteia
       AMQP_HOST: rabbit
       AMQP_PORT: 5672
+      AMQP_USERNAME: guest
+      AMQP_PASSWORD: guest
     env_file:
       - .env
     volumes:
@@ -48,12 +50,10 @@ services:
       - postgres:/var/lib/postgresql/data
 
   rabbit:
-    image: rabbitmq:3-management
+    image: rabbitmq:4-management
     hostname: rabbit
     ports:
       - 15672:15672
-    volumes:
-      - ./.rabbitmq_plugins:/etc/rabbitmq/enabled_plugins
 
 
 volumes:

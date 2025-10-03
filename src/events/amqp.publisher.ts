@@ -53,7 +53,7 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
   private pendingSession: Promise<Session> | undefined;
 
   /** Reuse one sender per address. */
-  private readonly senders: Record<string, Promise<AwaitableSender>> = {};
+  private readonly senders = new Map<string, Promise<AwaitableSender>>();
 
   private readonly serialize: AmqpSerializer;
 
@@ -75,6 +75,7 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
           this.logger.warn(
             `Connection to ${host}:${port} closed with open session`,
           );
+          this.senders.clear();
           this.session.remove();
           this.session = undefined;
         } else {
@@ -135,6 +136,7 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
     if (this.session) {
       if (this.session.isClosed()) {
         this.logger.warn('Session is unexpectedly closed; opening new session');
+        this.senders.clear();
         this.session.remove();
         this.session = undefined;
       } else {
@@ -164,9 +166,9 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
   }
 
   private async getSender(address: string): Promise<AwaitableSender> {
-    let sender = await this.senders[address];
-    if (sender && !sender.isClosed()) {
-      return sender;
+    const existingSender = await this.senders.get(address);
+    if (existingSender && !existingSender.isClosed()) {
+      return existingSender;
     }
 
     const session = await this.getOpenSession();
@@ -174,8 +176,8 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
       // name: senderName,
       target: { address },
     });
-    this.senders[address] = senderPromise;
-    sender = await senderPromise;
+    this.senders.set(address, senderPromise);
+    const sender = await senderPromise;
     this.logger.debug(`Sender created: ${sender.name} for ${address}`);
 
     if (this.senderLifetime) {
@@ -187,7 +189,7 @@ export class AmqpPublisher implements OnModuleInit, OnModuleDestroy {
 
   private async closeSender(sender: AwaitableSender): Promise<void> {
     const address = sender.target?.address || sender.address;
-    delete this.senders[address];
+    this.senders.delete(address);
     await sender.close({ closeSession: false });
     this.logger.debug(`Sender closed: ${sender.name} for ${address}`);
   }
