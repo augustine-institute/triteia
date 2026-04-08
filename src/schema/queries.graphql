@@ -4,6 +4,18 @@ type Query {
     collection: String!
     system: String
     globalId: String
+    globalIdPrefix: String
+    name: String
+    namePrefix: String
+    date: Date
+    dateBefore: Date
+    dateAfter: Date
+    createdAt: Date
+    createdBefore: Date
+    createdAfter: Date
+    updatedAt: Date
+    updatedBefore: Date
+    updatedAfter: Date
     pageToken: Int
     pageSize: Int
     deleted: Boolean

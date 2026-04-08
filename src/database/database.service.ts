@@ -66,7 +66,7 @@ export abstract class DatabaseService implements DbConnection {
 
   async list(
     collection: string,
-    globalId: string,
+    globalId?: string,
     options?: ListOptions,
   ): Promise<[DbDocument[], number?]> {
     return this.withTransaction((conn) => {

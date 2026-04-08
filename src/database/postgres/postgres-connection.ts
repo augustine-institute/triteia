@@ -26,16 +26,78 @@ export class PostgresConnection implements DbConnection {
 
   async list(
     collection: string,
-    globalId: string,
+    globalId?: string,
     options?: ListOptions,
   ): Promise<[DbDocument[], number?]> {
-    const conditions = ['"globalId" = $1'];
-    const params = [globalId];
+    const conditions: string[] = [];
+    const params: Array<string | Date> = [];
+
+    if (globalId) {
+      params.push(globalId);
+      conditions.push(`"globalId" = $${params.length}`);
+    } else if (options?.globalIdPrefix) {
+      const escaped = options.globalIdPrefix.replace(/[%_\\]/g, '\\$&');
+      params.push(`${escaped}%`);
+      conditions.push(`"globalId" LIKE $${params.length}`);
+    }
 
     if (options?.system) {
       params.push(options.system);
       conditions.push(`system = $${params.length}`);
     }
+
+    if (options?.name) {
+      params.push(options.name);
+      conditions.push(`name = $${params.length}`);
+    } else if (options?.namePrefix) {
+      const escaped = options.namePrefix.replace(/[%_\\]/g, '\\$&');
+      params.push(`${escaped}%`);
+      conditions.push(`name LIKE $${params.length}`);
+    }
+
+    if (options?.date) {
+      params.push(options.date);
+      conditions.push(`date = $${params.length}`);
+    } else {
+      // note: because of rounding, these should be inclusive, which mirrors the behavior of BETWEEN
+      if (options?.dateAfter) {
+        params.push(options.dateAfter);
+        conditions.push(`date >= $${params.length}`);
+      }
+      if (options?.dateBefore) {
+        params.push(options.dateBefore);
+        conditions.push(`date <= $${params.length}`);
+      }
+    }
+
+    if (options?.createdAt) {
+      params.push(options.createdAt);
+      conditions.push(`"createdAt" = $${params.length}`);
+    } else {
+      if (options?.createdAfter) {
+        params.push(options.createdAfter);
+        conditions.push(`"createdAt" >= $${params.length}`);
+      }
+      if (options?.createdBefore) {
+        params.push(options.createdBefore);
+        conditions.push(`"createdAt" <= $${params.length}`);
+      }
+    }
+
+    if (options?.updatedAt) {
+      params.push(options.updatedAt);
+      conditions.push(`"updatedAt" = $${params.length}`);
+    } else {
+      if (options?.updatedAfter) {
+        params.push(options.updatedAfter);
+        conditions.push(`"updatedAt" >= $${params.length}`);
+      }
+      if (options?.updatedBefore) {
+        params.push(options.updatedBefore);
+        conditions.push(`"updatedAt" <= $${params.length}`);
+      }
+    }
+
     if (!options?.deleted) {
       conditions.push('"deletedAt" IS NULL');
     }
@@ -47,7 +109,7 @@ export class PostgresConnection implements DbConnection {
       `SELECT system, id, "globalId", name, date, "createdAt", "updatedAt", "deletedAt"
          ${options?.withContent ? ', content' : ''}
        FROM ${this.conn.escapeIdentifier(collection)}
-       WHERE ${conditions.join(' AND ')}
+       ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
        ORDER BY "createdAt" ASC
        OFFSET ${pageToken}
        LIMIT ${pageSize}`,

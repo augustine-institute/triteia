@@ -18,7 +18,7 @@ export interface DbConnection {
 
   list(
     collection: string,
-    globalId: string,
+    globalId?: string,
     options?: ListOptions,
   ): Promise<[DbDocument[], number?]>;
 

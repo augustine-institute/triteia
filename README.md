@@ -38,6 +38,12 @@ curl localhost:3000/collections/users/somewhere?globalId=4ebc7386-f87b-4e9a-8592
 
 # list record references in all systems with the same global id
 curl localhost:3000/collections/users?globalId=4ebc7386-f87b-4e9a-8592-f7b40977d119
+
+# list records by name prefix
+curl localhost:3000/collections/users?namePrefix=John
+
+# list records created within a date range
+curl "localhost:3000/collections/users?createdAfter=2024-01-01&createdBefore=2024-12-31"
 ```
 
 ## Document Structure
@@ -143,17 +149,34 @@ curl localhost:3000/collections/users?globalId=4ebc7386-f87b-4e9a-8592-f7b40977d
 
 **GET `/collections/:collection/:system?`**
 
-*   **Description:** Lists records within a specific collection. Requires a global ID parameter.
+*   **Description:** Lists records within a specific collection. Supports filtering by various fields, prefix matching, and date ranges.
 *   **Parameters:**
-    *   `collection` (required):  The name of the collection.
+    *   `collection` (required): The name of the collection.
     *   `system` (optional): A system to filter by.
-    *   `globalId` (required, query parameter):  The global ID to find records for.
-*   **Example Request:**
+*   **Query Parameters (Filtering):**
+    *   `globalId`: Exact match for global ID.
+    *   `globalIdPrefix`: Search for global IDs starting with this value.
+    *   `name`: Exact match for name.
+    *   `namePrefix`: Search for names starting with this value.
+    *   `date`: Exact match for the record date.
+    *   `dateAfter` / `dateBefore`: Filter by record date range.
+    *   `createdAfter` / `createdBefore`: Filter by creation timestamp range.
+    *   `updatedAfter` / `updatedBefore`: Filter by update timestamp range.
+    *   `deleted`: Include deleted documents (boolean).
+*   **Query Parameters (Pagination):**
+    *   `pageSize`: Number of records to return (default 100).
+    *   `pageToken`: Offset for the next page.
+*   **Example Requests:**
     ```bash
+    # Exact match
     curl "http://localhost:3000/collections/products?globalId=sku-123"
+    # Prefix match
+    curl "http://localhost:3000/collections/users?namePrefix=John"
+    # Date range
+    curl "http://localhost:3000/collections/orders?createdAfter=2024-01-01"
     ```
-*   **Response:** A `ListResponse` containing an array of `Document` objects.
-*   **Notes:**  The `globalId` parameter is mandatory.  The `system` parameter is used to filter documents by the system they belong to.
+*   **Response:** A `ListResponse` containing an array of `Document` objects and a `nextPageToken`.
+*   **Notes:** All filter parameters are optimized to use database indexes. Exact matches take precedence over prefix/range filters for the same field.
 
 ### Load Document
 

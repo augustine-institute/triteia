@@ -22,26 +22,35 @@ export class MockdbService extends DatabaseService {
 
   async list(
     collection: string,
-    globalId: string,
+    globalId?: string,
     options?: ListOptions,
   ): Promise<[DbDocument[], number?]> {
-    let documents = [
+    let documents: DbDocument[] = [
       {
-        system: 'mock-system',
+        system: options?.system || 'mock-system',
         id: 'mock-1234',
-        globalId,
-        name: `mock ${collection}`,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        globalId: globalId || options?.globalId,
+        name: options?.name || `mock ${collection}`,
+        date: options?.date ? new Date(options.date) : undefined,
+        createdAt: options?.createdAt
+          ? new Date(options.createdAt)
+          : new Date(),
+        updatedAt: options?.updatedAt
+          ? new Date(options.updatedAt)
+          : new Date(),
         ...(options?.withContent && {
           content: { id: 'mock-1234', name: `mock ${collection}` },
         }),
       },
     ];
+    // Simple mock filtering
+    if (globalId) {
+      documents = documents.filter((doc) => doc.globalId === globalId);
+    }
     if (options?.system) {
       documents = documents.filter((doc) => doc.system === options.system);
     }
-    return [documents, 2];
+    return [documents, documents.length];
   }
 
   async load(

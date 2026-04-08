@@ -38,9 +38,6 @@ export class AppResolver {
     this.logger.debug(
       `list: ${JSON.stringify({ collection, globalId, options })}`,
     );
-    if (!globalId) {
-      throw new BadRequestException();
-    }
     const withContent = true; // TODO base this on selected fields
     return this.appService.list(collection, globalId, {
       withContent,

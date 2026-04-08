@@ -44,7 +44,7 @@ export class AppService {
 
   async list(
     collection: string,
-    globalId: string,
+    globalId?: string,
     options?: ListOptions,
   ): Promise<ListResponse> {
     const [documents, nextPageToken] = await this.database.list(
@@ -218,6 +218,7 @@ export class AppService {
     return {
       name: input?.name,
       at:
+        // FIXME this doesn't work with date objects
         before && before.updatedAt === after.updatedAt
           ? // no changes including updatedAt; use the current time for a unique `at`
             new Date()

@@ -81,7 +81,7 @@ export abstract class IMutation {
 }
 
 export abstract class IQuery {
-    abstract list(collection: string, system?: Nullable<string>, globalId?: Nullable<string>, pageToken?: Nullable<number>, pageSize?: Nullable<number>, deleted?: Nullable<boolean>): ListResponse | Promise<ListResponse>;
+    abstract list(collection: string, system?: Nullable<string>, globalId?: Nullable<string>, globalIdPrefix?: Nullable<string>, name?: Nullable<string>, namePrefix?: Nullable<string>, date?: Nullable<Date>, dateBefore?: Nullable<Date>, dateAfter?: Nullable<Date>, createdAt?: Nullable<Date>, createdBefore?: Nullable<Date>, createdAfter?: Nullable<Date>, updatedAt?: Nullable<Date>, updatedBefore?: Nullable<Date>, updatedAfter?: Nullable<Date>, pageToken?: Nullable<number>, pageSize?: Nullable<number>, deleted?: Nullable<boolean>): ListResponse | Promise<ListResponse>;
 
     abstract load(uri: string, deleted?: Nullable<boolean>, at?: Nullable<Date>): Document | Promise<Document>;
 

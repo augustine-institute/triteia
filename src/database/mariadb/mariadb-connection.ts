@@ -32,27 +32,90 @@ export class MariadbConnection implements DbConnection {
 
   async list(
     collection: string,
-    globalId: string,
+    globalId?: string,
     options?: ListOptions,
   ): Promise<[DbDocument[], number?]> {
-    const conditions = ['globalId = ?'];
-    const params = [globalId];
-    const pageSize = Number(options?.pageSize || 100);
-    const pageToken = Number(options?.pageToken || 0);
+    const conditions: string[] = [];
+    const params: Array<string | Date> = [];
+
+    if (globalId) {
+      conditions.push('globalId = ?');
+      params.push(globalId);
+    } else if (options?.globalIdPrefix) {
+      const escaped = options.globalIdPrefix.replace(/[%_\\]/g, '\\$&');
+      conditions.push('globalId LIKE ?');
+      params.push(`${escaped}%`);
+    }
 
     if (options?.system) {
       conditions.push('system = ?');
       params.push(options.system);
     }
+
+    if (options?.name) {
+      conditions.push('name = ?');
+      params.push(options.name);
+    } else if (options?.namePrefix) {
+      const escaped = options.namePrefix.replace(/[%_\\]/g, '\\$&');
+      conditions.push('name LIKE ?');
+      params.push(`${escaped}%`);
+    }
+
+    if (options?.date) {
+      conditions.push('date = ?');
+      params.push(options.date);
+    } else {
+      // note: because of rounding, these should be inclusive, which mirrors the behavior of BETWEEN
+      if (options?.dateAfter) {
+        conditions.push('date >= ?');
+        params.push(options.dateAfter);
+      }
+      if (options?.dateBefore) {
+        conditions.push('date <= ?');
+        params.push(options.dateBefore);
+      }
+    }
+
+    if (options?.createdAt) {
+      conditions.push('createdAt = ?');
+      params.push(options.createdAt);
+    } else {
+      if (options?.createdAfter) {
+        conditions.push('createdAt >= ?');
+        params.push(options.createdAfter);
+      }
+      if (options?.createdBefore) {
+        conditions.push('createdAt <= ?');
+        params.push(options.createdBefore);
+      }
+    }
+
+    if (options?.updatedAt) {
+      conditions.push('updatedAt = ?');
+      params.push(options.updatedAt);
+    } else {
+      if (options?.updatedAfter) {
+        conditions.push('updatedAt >= ?');
+        params.push(options.updatedAfter);
+      }
+      if (options?.updatedBefore) {
+        conditions.push('updatedAt <= ?');
+        params.push(options.updatedBefore);
+      }
+    }
+
     if (!options?.deleted) {
       conditions.push('deletedAt IS NULL');
     }
+
+    const pageSize = Number(options?.pageSize || 100);
+    const pageToken = Number(options?.pageToken || 0);
 
     const results = await this.conn.query(
       `SELECT system, id, globalId, name, date, createdAt, updatedAt, deletedAt
          ${options?.withContent ? ', content' : ''}
        FROM ${this.conn.escapeId(collection)}
-       WHERE ${conditions.join(' AND ')}
+       ${conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''}
        ORDER BY createdAt ASC
        LIMIT ${pageToken},${pageSize}`,
       params,

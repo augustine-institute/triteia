@@ -73,10 +73,6 @@ export class AppController {
     query?: { globalId?: string } & ListOptions,
   ): Promise<ListResponse> {
     const { globalId, withContent, ...options } = query ?? {};
-    if (!globalId) {
-      // TODO list systems or paginate all records?
-      throw new BadRequestException();
-    }
     return this.appService.list(collection, globalId, {
       system,
       withContent: withContent ?? !!system,
